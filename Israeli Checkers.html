@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>דמקה ישראלית - 2 שחקנים</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Heebo & Rubik -->
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Heebo', 'sans-serif'],
+                        display: ['Rubik', 'sans-serif'],
+                    },
+                    colors: {
+                        boardDark: '#1e293b',
+                        boardLight: '#f8fafc',
+                        squareDark: '#334155',
+                        squareLight: '#cbd5e1',
+                        playerWhite: '#f1f5f9',
+                        playerBlack: '#0f172a',
+                        highlightMove: '#10b981',
+                        highlightCapture: '#ef4444',
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-short': 'bounce 0.6s infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+        }
+
+        /* Board grid rendering fixes */
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            aspect-ratio: 1 / 1;
+        }
+
+        .piece {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+        }
+
+        .piece:active {
+            transform: scale(1.15);
+        }
+
+        .board-flipped {
+            transform: rotate(180deg);
+        }
+        
+        .board-flipped .piece-inner {
+            transform: rotate(180deg);
+        }
+
+        /* Custom glow effects */
+        .glow-red {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.8), inset 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .glow-green {
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.9);
+        }
+
+        .glow-gold {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.9);
+        }
+
+        /* Custom scrollbar for log */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-slate-100 flex flex-col items-center justify-between min-h-screen p-2 sm:p-4 overflow-x-hidden">
+
+    <!-- Top Navigation Header -->
+    <header class="w-full max-w-lg flex items-center justify-between bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-800 shadow-xl mb-2">
+        <div class="flex items-center gap-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white shadow-lg shadow-red-950/50">
+                <i class="fa-solid fa-chess-king text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-display font-black text-lg leading-none tracking-tight text-white">דמקה ישראלית</h1>
+                <span class="text-xs text-amber-400 font-semibold">2 שחקנים (אותו מכשיר)</span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="btn-sound" onclick="toggleSound()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700/50 active:scale-95" title="צלילים">
+                <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+            </button>
+            <button onclick="toggleFlipBoard()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700/50 active:scale-95" title="סיבוב לוח">
+                <i class="fa-solid fa-rotate text-sm"></i>
+            </button>
+            <button onclick="openRulesModal()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700/50 active:scale-95" title="חוקים">
+                <i class="fa-solid fa-circle-question text-base"></i>
+            </button>
+            <button onclick="confirmRestart()" class="w-10 h-10 rounded-xl bg-red-900/40 hover:bg-red-800/60 text-red-300 flex items-center justify-center transition border border-red-700/50 active:scale-95" title="משחק חדש">
+                <i class="fa-solid fa-arrow-rotate-right text-base"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Turn Banner & Forced Capture Warning -->
+    <div class="w-full max-w-lg mb-2 flex flex-col gap-2">
+        <div id="turn-card" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-lg transition-all duration-300">
+            <!-- Player White Side -->
+            <div id="player-white-box" class="flex items-center gap-2 p-2 rounded-xl transition-all duration-300 w-5/12">
+                <div class="w-7 h-7 rounded-full bg-slate-200 border-2 border-white shadow flex items-center justify-center text-slate-900 font-bold text-xs">
+                    <span id="score-white">12</span>
+                </div>
+                <div class="overflow-hidden">
+                    <div class="text-xs font-bold text-slate-300 truncate">שחקן לבן</div>
+                    <div id="captured-by-white" class="flex flex-wrap gap-0.5 mt-0.5 min-h-[12px]"></div>
+                </div>
+            </div>
+
+            <!-- Turn Status Middle Badge -->
+            <div class="flex flex-col items-center justify-center text-center px-1">
+                <div id="turn-indicator-badge" class="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1.5 shadow-sm">
+                    <span id="turn-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="turn-text">תור לבן</span>
+                </div>
+            </div>
+
+            <!-- Player Black Side -->
+            <div id="player-black-box" class="flex items-center gap-2 p-2 rounded-xl transition-all duration-300 w-5/12 justify-end">
+                <div class="overflow-hidden text-left">
+                    <div class="text-xs font-bold text-slate-300 truncate text-right">שחקן שחור</div>
+                    <div id="captured-by-black" class="flex flex-wrap gap-0.5 mt-0.5 min-h-[12px] justify-end"></div>
+                </div>
+                <div class="w-7 h-7 rounded-full bg-slate-950 border-2 border-slate-700 shadow flex items-center justify-center text-amber-400 font-bold text-xs">
+                    <span id="score-black">12</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forced Jump Alert Banner (Hidden by default) -->
+        <div id="forced-jump-alert" class="hidden bg-red-950/80 border border-red-600/60 text-red-200 text-xs px-3 py-2 rounded-xl flex items-center justify-between animate-pulse shadow-md">
+            <div class="flex items-center gap-2 font-bold">
+                <i class="fa-solid fa-triangle-exclamation text-red-400 text-sm"></i>
+                <span>חובה לאכול! (חוק "שרופים")</span>
+            </div>
+            <span class="text-[10px] bg-red-900/80 px-2 py-0.5 rounded-md border border-red-700">מהלך אכילה נדרש</span>
+        </div>
+    </div>
+
+    <!-- Main Game Board Container -->
+    <main class="w-full max-w-lg flex-1 flex flex-col items-center justify-center my-auto">
+        <div class="w-full aspect-square bg-slate-950 p-2 sm:p-3 rounded-3xl shadow-2xl border-4 border-slate-800 relative">
+            <!-- Checkers Board Grid -->
+            <div id="board" class="board-grid w-full h-full rounded-2xl overflow-hidden border border-slate-800 shadow-inner transition-transform duration-500">
+                <!-- 64 Squares will be generated by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Controls & Log Footer -->
+    <footer class="w-full max-w-lg mt-3 flex flex-col gap-2">
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between text-xs text-slate-400">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-list-ol text-slate-500"></i>
+                <span>מהלך אחרון:</span>
+                <span id="last-move-text" class="text-slate-200 font-medium">המשחק מוכן למכה ראשונה</span>
+            </div>
+            <div class="text-[11px] text-slate-500 font-mono" id="move-counter">מהלכים: 0</div>
+        </div>
+    </footer>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-md w-full shadow-2xl transform scale-95 transition-transform duration-300 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-amber-500 text-lg"></i>
+                    <h2 class="text-lg font-black text-white">חוקי דמקה ישראלית</h2>
+                </div>
+                <button onclick="closeRulesModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="overflow-y-auto custom-scrollbar my-4 space-y-3 text-xs text-slate-300 leading-relaxed pr-1">
+                <div class="bg-amber-950/30 border border-amber-600/30 p-2.5 rounded-xl text-amber-200">
+                    <span class="font-bold text-amber-400 block mb-0.5">⚠️ חובה לאכול ("שרופים"):</span>
+                    אם יש לך אפשרות לאכול חייל יריב, **אתה חייב לאכול!** לא ניתן לבצע מהלך רגיל כשקיימת אכילה.
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-sm mb-1 text-amber-400">1. תנועה ואכילה רגילה</h3>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li>חייל רגיל נע משבצת אחת אלכסונית **קדימה בלבד**.</li>
+                        <li><strong class="text-amber-300">אכילה ראשונה בתור:</strong> חייל רגיל יכול לאכול **קדימה בלבד**.</li>
+                        <li><strong class="text-amber-300">אכילה ברצף (החל מהחייל השני):</strong> רק החל מהאכילה השנייה באותו רצף בתור, חייל רגיל מורשה לאכול גם **אחורה**.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-sm mb-1 text-amber-400">2. רצף אכילות</h3>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li>אם בתום אכילה יש אפשרות לאכול חייל נוסף, התור ממשיך **באותו התור**.</li>
+                        <li>חייל שהגיע לשורה האחרונה תוך כדי רצף אכילות הופך **מיד למלכה** וממשיך לאכול כמלכה באותו התור.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-sm mb-1 text-amber-400">3. חוקי המלכה (דמקה ישראלית)</h3>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li>מלכה נעה לכל מרחק לאורך האלכסון, בתנאי שאין בדרכה חיילים.</li>
+                        <li>מלכה יכולה לאכול קדימה ואחורה **כבר מהמכה הראשונה**.</li>
+                        <li>מלכה אינה יכולה לדלג מעל חיילים שלך, ואינה יכולה לדלג מעל יותר מחייל יריב אחד במכה.</li>
+                        <li><strong class="text-amber-300">נחיתת מלכה לאחר אכילה:</strong> בעת אכילה, המלכה יכולה לנחות **בכל משבצת ריקה בהמשך האלכסון** מעבר לחייל שנאכל, כל עוד הדרך נקייה מחיילים נוספים.</li>
+                    </ul>
+                </div>
+            </div>
+            <button onclick="closeRulesModal()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow-lg transition text-sm"> הבנתי, בואו נשחק!</button>
+        </div>
+    </div>
+
+    <!-- Victory / Win Modal -->
+    <div id="win-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-500">
+        <canvas id="confetti-canvas" class="absolute inset-0 pointer-events-none z-0"></canvas>
+        <div class="bg-slate-900 border-2 border-amber-500/50 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl relative z-10 transform scale-90 transition-transform duration-300">
+            <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-amber-400 to-yellow-200 flex items-center justify-center text-slate-950 shadow-xl mb-4 animate-bounce-short">
+                <i class="fa-solid fa-trophy text-4xl"></i>
+            </div>
+            <h2 id="winner-title" class="text-2xl font-black text-white font-display mb-1">ניצחון מוחץ!</h2>
+            <p id="winner-subtitle" class="text-slate-300 text-sm mb-6">השחקן הלבן ניצח את המשחק!</p>
+            
+            <div class="flex flex-col gap-3">
+                <button onclick="restartGame()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-amber-500/25 transition active:scale-95 text-base flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>משחק חדש</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Engine JavaScript -->
+    <script>
+        /**
+         * ISRAELI CHECKERS ENGINE & GAME STATE
+         * Player Constants:
+         * 1 = WHITE (moves UP, rows decreasing: 7 -> 0)
+         * 2 = BLACK (moves DOWN, rows increasing: 0 -> 7)
+         * Kings represented as: WHITE_KING (11), BLACK_KING (12)
+         */
+        const EMPTY = 0;
+        const WHITE = 1;
+        const BLACK = 2;
+        const WHITE_KING = 11;
+        const BLACK_KING = 12;
+
+        let boardState = [];
+        let turn = WHITE; // WHITE starts
+        let selectedSquare = null; // {r, c}
+        let validMoves = []; // List of legal destinations for selected piece
+        let mandatoryCapturesExist = false;
+        let activeMultiCapturePiece = null; // If in middle of chain jump: {r, c}
+        let jumpCountInTurn = 0; // Tracks sequence jump count within current turn
+        let moveHistoryCount = 0;
+        let isBoardFlipped = false;
+        let soundEnabled = true;
+
+        // Captured pieces counter
+        let capturedWhiteCount = 0;
+        let capturedBlackCount = 0;
+
+        // Sound Synthesizer via Web Audio API
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new AudioCtx();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'select') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'move') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'capture') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(440, now + 0.06);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                } else if (type === 'king') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554.37, now + 0.15);
+                    osc.frequency.setValueAtTime(659.25, now + 0.3);
+                    osc.frequency.setValueAtTime(880, now + 0.45);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+                    osc.start(now);
+                    osc.stop(now + 0.7);
+                }
+            } catch (e) {
+                // Audio fallback silence
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('sound-icon');
+            btn.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark text-red-400';
+        }
+
+        // Initialize Board Array (8x8)
+        function initBoard() {
+            boardState = Array(8).fill(null).map(() => Array(8).fill(EMPTY));
+
+            // Standard Checkers Initial Setup
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if ((r + c) % 2 === 1) { // Dark squares only
+                        if (r < 3) boardState[r][c] = BLACK;
+                        else if (r > 4) boardState[r][c] = WHITE;
+                    }
+                }
+            }
+            turn = WHITE;
+            selectedSquare = null;
+            validMoves = [];
+            activeMultiCapturePiece = null;
+            jumpCountInTurn = 0;
+            moveHistoryCount = 0;
+            capturedWhiteCount = 0;
+            capturedBlackCount = 0;
+            
+            updateUI();
+            checkGameState();
+        }
+
+        // Helper functions
+        function isOpponent(p1, p2) {
+            if (p1 === EMPTY || p2 === EMPTY) return false;
+            const p1Color = (p1 === WHITE || p1 === WHITE_KING) ? WHITE : BLACK;
+            const p2Color = (p2 === WHITE || p2 === WHITE_KING) ? WHITE : BLACK;
+            return p1Color !== p2Color;
+        }
+
+        function isPlayerPiece(piece, player) {
+            if (piece === EMPTY) return false;
+            return player === WHITE ? (piece === WHITE || piece === WHITE_KING) : (piece === BLACK || piece === BLACK_KING);
+        }
+
+        function isKing(piece) {
+            return piece === WHITE_KING || piece === BLACK_KING;
+        }
+
+        function inBounds(r, c) {
+            return r >= 0 && r < 8 && c >= 0 && c < 8;
+        }
+
+        /**
+         * GET ALL VALID CAPTURES FOR A SPECIFIC PIECE
+         * Israeli Rule Enforcement:
+         * - Men: Initial capture step (jumpCountInTurn === 0) MUST BE FORWARD ONLY.
+         *        Subsequent captures in the same continuous multi-jump sequence (jumpCountInTurn >= 1) can capture both forward & backward.
+         * - Kings: Flying diagonal jump. Can land on ANY empty square after the captured enemy piece along the diagonal, as long as no other pieces block the landing path.
+         */
+        function getPieceCaptures(r, c, board = boardState, sequenceJumpCount = jumpCountInTurn) {
+            const piece = board[r][c];
+            if (piece === EMPTY) return [];
+            
+            const captures = [];
+            const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+            if (!isKing(piece)) {
+                // Regular piece (Man)
+                const forwardDir = (piece === WHITE) ? -1 : 1;
+
+                for (let [dr, dc] of directions) {
+                    const isBackward = (dr !== forwardDir);
+
+                    // ISRAELI RULE: First jump in turn cannot be backwards for regular pieces!
+                    if (isBackward && sequenceJumpCount === 0) {
+                        continue;
+                    }
+
+                    const midR = r + dr;
+                    const midC = c + dc;
+                    const endR = r + 2 * dr;
+                    const endC = c + 2 * dc;
+
+                    if (inBounds(endR, endC)) {
+                        const midPiece = board[midR][midC];
+                        const endPiece = board[endR][endC];
+
+                        if (isOpponent(piece, midPiece) && endPiece === EMPTY) {
+                            captures.push({
+                                from: {r, c},
+                                to: {r: endR, c: endC},
+                                captured: {r: midR, c: midC}
+                            });
+                        }
+                    }
+                }
+            } else {
+                // King piece (Flying King with flexible landing behind captured piece)
+                for (let [dr, dc] of directions) {
+                    let step = 1;
+                    let foundEnemy = null;
+
+                    while (inBounds(r + dr * step, c + dc * step)) {
+                        const curR = r + dr * step;
+                        const curC = c + dc * step;
+                        const curPiece = board[curR][curC];
+
+                        if (curPiece !== EMPTY) {
+                            if (!isOpponent(piece, curPiece)) {
+                                // Blocked by own piece
+                                break;
+                            } else {
+                                // Found an enemy piece
+                                if (foundEnemy === null) {
+                                    foundEnemy = {r: curR, c: curC};
+                                } else {
+                                    // Second enemy piece in line -> blocked (cannot jump 2 pieces)
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Empty square
+                            if (foundEnemy !== null) {
+                                // Valid landing square anywhere after enemy piece
+                                captures.push({
+                                    from: {r, c},
+                                    to: {r: curR, c: curC},
+                                    captured: foundEnemy
+                                });
+                            }
+                        }
+                        step++;
+                    }
+                }
+            }
+            return captures;
+        }
+
+        /**
+         * GET ALL VALID NON-CAPTURE MOVES FOR A PIECE
+         */
+        function getPieceSimpleMoves(r, c, board = boardState) {
+            const piece = board[r][c];
+            if (piece === EMPTY) return [];
+
+            const moves = [];
+
+            if (!isKing(piece)) {
+                // Man simple moves: 1 step diagonal FORWARD ONLY
+                const forwardDir = (piece === WHITE) ? -1 : 1;
+                const directions = [[forwardDir, -1], [forwardDir, 1]];
+
+                for (let [dr, dc] of directions) {
+                    const targetR = r + dr;
+                    const targetC = c + dc;
+                    if (inBounds(targetR, targetC) && board[targetR][targetC] === EMPTY) {
+                        moves.push({
+                            from: {r, c},
+                            to: {r: targetR, c: targetC},
+                            captured: null
+                        });
+                    }
+                }
+            } else {
+                // King simple moves: Flying along any diagonal until blocked
+                const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+                for (let [dr, dc] of directions) {
+                    let step = 1;
+                    while (inBounds(r + dr * step, c + dc * step)) {
+                        const targetR = r + dr * step;
+                        const targetC = c + dc * step;
+                        if (board[targetR][targetC] === EMPTY) {
+                            moves.push({
+                                from: {r, c},
+                                to: {r: targetR, c: targetC},
+                                captured: null
+                            });
+                        } else {
+                            break;
+                        }
+                        step++;
+                    }
+                }
+            }
+            return moves;
+        }
+
+        /**
+         * GET ALL AVAILABLE CAPTURES FOR CURRENT PLAYER ACROSS THE WHOLE BOARD
+         */
+        function getAllPlayerCaptures(player, board = boardState, sequenceJumpCount = jumpCountInTurn) {
+            let allCaptures = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (isPlayerPiece(board[r][c], player)) {
+                        const pieceCaps = getPieceCaptures(r, c, board, sequenceJumpCount);
+                        allCaptures = allCaptures.concat(pieceCaps);
+                    }
+                }
+            }
+            return allCaptures;
+        }
+
+        /**
+         * EVALUATE LEGAL MOVES FOR THE CURRENT TURN/PIECE
+         */
+        function getLegalMovesForSquare(r, c) {
+            // If we are mid multi-capture, ONLY that specific piece can move
+            if (activeMultiCapturePiece) {
+                if (activeMultiCapturePiece.r !== r || activeMultiCapturePiece.c !== c) {
+                    return [];
+                }
+                return getPieceCaptures(r, c, boardState, jumpCountInTurn);
+            }
+
+            const allCaptures = getAllPlayerCaptures(turn, boardState, jumpCountInTurn);
+            
+            // "Shrufim" / Mandatory Capture Rule:
+            if (allCaptures.length > 0) {
+                return getPieceCaptures(r, c, boardState, jumpCountInTurn);
+            } else {
+                return getPieceSimpleMoves(r, c, boardState);
+            }
+        }
+
+        /**
+         * HANDLE SQUARE TOUCH / CLICK
+         */
+        function handleSquareClick(r, c) {
+            const piece = boardState[r][c];
+
+            // If a move target square is clicked
+            if (selectedSquare) {
+                const move = validMoves.find(m => m.to.r === r && m.to.c === c);
+                if (move) {
+                    executeMove(move);
+                    return;
+                }
+            }
+
+            // Mid multi-jump constraint: cannot switch selection to another piece
+            if (activeMultiCapturePiece) {
+                return;
+            }
+
+            // Selecting own piece
+            if (isPlayerPiece(piece, turn)) {
+                const allPlayerCaps = getAllPlayerCaptures(turn, boardState, jumpCountInTurn);
+                if (allPlayerCaps.length > 0) {
+                    const pieceCaps = getPieceCaptures(r, c, boardState, jumpCountInTurn);
+                    if (pieceCaps.length === 0) {
+                        playSound('select');
+                        return;
+                    }
+                }
+
+                selectedSquare = {r, c};
+                validMoves = getLegalMovesForSquare(r, c);
+                playSound('select');
+                renderBoard();
+            } else {
+                selectedSquare = null;
+                validMoves = [];
+                renderBoard();
+            }
+        }
+
+        /**
+         * EXECUTE A MOVE AND HANDLE PROMOTIONS, MULTI-JUMPS, TURN SWITCHING
+         */
+        function executeMove(move) {
+            const {from, to, captured} = move;
+            let piece = boardState[from.r][from.c];
+
+            // Clear starting square
+            boardState[from.r][from.c] = EMPTY;
+
+            // Handle Capture Removal
+            let isCapture = false;
+            if (captured) {
+                const capturedPiece = boardState[captured.r][captured.c];
+                boardState[captured.r][captured.c] = EMPTY;
+                isCapture = true;
+                jumpCountInTurn++; // Increment count of jumps performed in this turn
+
+                if (capturedPiece === WHITE || capturedPiece === WHITE_KING) capturedWhiteCount++;
+                if (capturedPiece === BLACK || capturedPiece === BLACK_KING) capturedBlackCount++;
+            }
+
+            // Check Promotion mid-move or end-move
+            let promotedNow = false;
+            if (piece === WHITE && to.r === 0) {
+                piece = WHITE_KING;
+                promotedNow = true;
+            } else if (piece === BLACK && to.r === 7) {
+                piece = BLACK_KING;
+                promotedNow = true;
+            }
+
+            // Place piece on destination
+            boardState[to.r][to.c] = piece;
+
+            // Audio & Log
+            if (promotedNow) {
+                playSound('king');
+            } else if (isCapture) {
+                playSound('capture');
+            } else {
+                playSound('move');
+            }
+
+            moveHistoryCount++;
+            updateLastMoveLog(from, to, isCapture, promotedNow);
+
+            // Check for Multi-Jump (Sequential Captures)
+            if (isCapture) {
+                // Get additional captures for this piece using updated jumpCountInTurn (now >= 1, enabling backward jumps for standard pieces)
+                const furtherCaptures = getPieceCaptures(to.r, to.c, boardState, jumpCountInTurn);
+
+                if (furtherCaptures.length > 0) {
+                    // Turn continues! Active player must keep capturing with this piece
+                    activeMultiCapturePiece = {r: to.r, c: to.c};
+                    selectedSquare = {r: to.r, c: to.c};
+                    validMoves = furtherCaptures;
+                    updateUI();
+                    renderBoard();
+                    return;
+                }
+            }
+
+            // End of turn sequence
+            activeMultiCapturePiece = null;
+            jumpCountInTurn = 0; // Reset jump counter for next turn
+            selectedSquare = null;
+            validMoves = [];
+            turn = (turn === WHITE) ? BLACK : WHITE;
+
+            updateUI();
+            checkGameState();
+        }
+
+        /**
+         * CHECK WIN / NO MOVES CONDITIONS
+         */
+        function checkGameState() {
+            const allCaptures = getAllPlayerCaptures(turn, boardState, jumpCountInTurn);
+            let hasMoves = allCaptures.length > 0;
+
+            if (!hasMoves) {
+                // Check if any simple moves exist for player
+                for (let r = 0; r < 8 && !hasMoves; r++) {
+                    for (let c = 0; c < 8 && !hasMoves; c++) {
+                        if (isPlayerPiece(boardState[r][c], turn)) {
+                            if (getPieceSimpleMoves(r, c).length > 0) {
+                                hasMoves = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Count remaining pieces
+            let whitePieces = 0;
+            let blackPieces = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (boardState[r][c] === WHITE || boardState[r][c] === WHITE_KING) whitePieces++;
+                    if (boardState[r][c] === BLACK || boardState[r][c] === BLACK_KING) blackPieces++;
+                }
+            }
+
+            if (whitePieces === 0 || (turn === WHITE && !hasMoves)) {
+                triggerWin(BLACK, whitePieces === 0 ? "כל החיילים הלבנים נאכלו!" : "ללבן אין מהלכים חוקיים!");
+            } else if (blackPieces === 0 || (turn === BLACK && !hasMoves)) {
+                triggerWin(WHITE, blackPieces === 0 ? "כל החיילים השחורים נאכלו!" : "לשחור אין מהלכים חוקיים!");
+            } else {
+                renderBoard();
+            }
+        }
+
+        function triggerWin(winner, reason) {
+            playSound('win');
+            const winModal = document.getElementById('win-modal');
+            const title = document.getElementById('winner-title');
+            const sub = document.getElementById('winner-subtitle');
+
+            title.textContent = (winner === WHITE) ? "הלבן ניצח!" : "השחור ניצח!";
+            sub.textContent = reason;
+
+            winModal.classList.remove('opacity-0', 'pointer-events-none');
+            winModal.querySelector('.transform').classList.remove('scale-90');
+            winModal.querySelector('.transform').classList.add('scale-100');
+
+            startConfetti();
+        }
+
+        function restartGame() {
+            const winModal = document.getElementById('win-modal');
+            winModal.classList.add('opacity-0', 'pointer-events-none');
+            stopConfetti();
+            initBoard();
+        }
+
+        function confirmRestart() {
+            if (moveHistoryCount > 0) {
+                if (confirm("האם לאפס את המשחק ולהתחיל מחדש?")) {
+                    restartGame();
+                }
+            } else {
+                restartGame();
+            }
+        }
+
+        // Toggle Board Flip for Face-to-Face Play
+        function toggleFlipBoard() {
+            isBoardFlipped = !isBoardFlipped;
+            const boardEl = document.getElementById('board');
+            if (isBoardFlipped) {
+                boardEl.classList.add('board-flipped');
+            } else {
+                boardEl.classList.remove('board-flipped');
+            }
+        }
+
+        /**
+         * RENDER GRAPHICAL BOARD AND PIECES
+         */
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            // Check forced jump alert badge status
+            const currentCaptures = getAllPlayerCaptures(turn, boardState, jumpCountInTurn);
+            mandatoryCapturesExist = currentCaptures.length > 0;
+
+            const alertBox = document.getElementById('forced-jump-alert');
+            if (mandatoryCapturesExist) {
+                alertBox.classList.remove('hidden');
+            } else {
+                alertBox.classList.add('hidden');
+            }
+
+            // Identify pieces that HAVE to capture
+            const forcedPieceCoords = new Set(currentCaptures.map(c => `${c.from.r},${c.from.c}`));
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const isDarkSquare = (r + c) % 2 === 1;
+                    const squareDiv = document.createElement('div');
+
+                    squareDiv.className = `relative flex items-center justify-center font-bold text-xs select-none ${
+                        isDarkSquare ? 'bg-slate-800' : 'bg-slate-300'
+                    }`;
+
+                    squareDiv.onclick = () => handleSquareClick(r, c);
+
+                    // Highlight Selected Square
+                    if (selectedSquare && selectedSquare.r === r && selectedSquare.c === c) {
+                        squareDiv.classList.add('ring-4', 'ring-amber-400', 'ring-inset', 'z-10');
+                    }
+
+                    // Highlight Valid Destination Moves
+                    const moveTarget = validMoves.find(m => m.to.r === r && m.to.c === c);
+                    if (moveTarget) {
+                        const marker = document.createElement('div');
+                        if (moveTarget.captured) {
+                            // Capture target marker (Glowing Red Ring)
+                            marker.className = 'w-6 h-6 sm:w-8 sm:h-8 rounded-full border-4 border-red-500 bg-red-500/40 glow-red animate-pulse z-20';
+                        } else {
+                            // Normal move marker (Glowing Green Dot)
+                            marker.className = 'w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-400 glow-green z-20';
+                        }
+                        squareDiv.appendChild(marker);
+                    }
+
+                    // Render Piece
+                    const piece = boardState[r][c];
+                    if (piece !== EMPTY) {
+                        const pieceDiv = document.createElement('div');
+                        const isWhite = (piece === WHITE || piece === WHITE_KING);
+                        const isPieceKing = isKing(piece);
+                        const isForcedToJump = forcedPieceCoords.has(`${r},${c}`);
+
+                        pieceDiv.className = `piece w-[82%] h-[82%] rounded-full cursor-pointer flex items-center justify-center relative shadow-xl transform active:scale-95 transition-all duration-200 z-10 ${
+                            isWhite 
+                                ? 'bg-gradient-to-b from-slate-100 via-slate-200 to-slate-400 border-2 border-white text-slate-900 shadow-slate-950/60' 
+                                : 'bg-gradient-to-b from-slate-800 via-slate-900 to-black border-2 border-slate-700 text-amber-400 shadow-black/80'
+                        } ${isForcedToJump ? 'ring-4 ring-red-500 animate-pulse-fast glow-red' : ''}`;
+
+                        // Inner design ring
+                        const innerRing = document.createElement('div');
+                        innerRing.className = `piece-inner w-[75%] h-[75%] rounded-full border ${
+                            isWhite ? 'border-slate-300/80 bg-slate-100/50' : 'border-slate-700/80 bg-slate-900/50'
+                        } flex items-center justify-center`;
+
+                        if (isPieceKing) {
+                            const crown = document.createElement('i');
+                            crown.className = `fa-solid fa-crown text-base sm:text-xl drop-shadow ${
+                                isWhite ? 'text-amber-500' : 'text-amber-400'
+                            }`;
+                            innerRing.appendChild(crown);
+                        }
+
+                        pieceDiv.appendChild(innerRing);
+                        squareDiv.appendChild(pieceDiv);
+                    }
+
+                    boardEl.appendChild(squareDiv);
+                }
+            }
+        }
+
+        /**
+         * UPDATE DASHBOARD, SCORES & CAPTURED PIECES
+         */
+        function updateUI() {
+            // Count remaining pieces
+            let whiteRemaining = 0;
+            let blackRemaining = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (boardState[r][c] === WHITE || boardState[r][c] === WHITE_KING) whiteRemaining++;
+                    if (boardState[r][c] === BLACK || boardState[r][c] === BLACK_KING) blackRemaining++;
+                }
+            }
+
+            document.getElementById('score-white').textContent = whiteRemaining;
+            document.getElementById('score-black').textContent = blackRemaining;
+            document.getElementById('move-counter').textContent = `מהלכים: ${moveHistoryCount}`;
+
+            // Render Captured Stacks
+            const capturedWhiteEl = document.getElementById('captured-by-white');
+            const capturedBlackEl = document.getElementById('captured-by-black');
+            capturedWhiteEl.innerHTML = '';
+            capturedBlackEl.innerHTML = '';
+
+            for (let i = 0; i < capturedBlackCount; i++) {
+                const dot = document.createElement('span');
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-950 border border-slate-700 inline-block';
+                capturedWhiteEl.appendChild(dot);
+            }
+
+            for (let i = 0; i < capturedWhiteCount; i++) {
+                const dot = document.createElement('span');
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-200 border border-white inline-block';
+                capturedBlackEl.appendChild(dot);
+            }
+
+            // Update Turn Badge UI
+            const turnBadge = document.getElementById('turn-indicator-badge');
+            const turnDot = document.getElementById('turn-dot');
+            const turnText = document.getElementById('turn-text');
+            const whiteBox = document.getElementById('player-white-box');
+            const blackBox = document.getElementById('player-black-box');
+
+            if (turn === WHITE) {
+                turnText.textContent = "תור לבן";
+                turnBadge.className = "px-3 py-1 rounded-full text-xs font-black uppercase bg-slate-100 text-slate-900 border border-white flex items-center gap-1.5 shadow-md";
+                turnDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                whiteBox.className = "flex items-center gap-2 p-2 rounded-xl bg-slate-800/80 border border-slate-700 shadow-md w-5/12";
+                blackBox.className = "flex items-center gap-2 p-2 rounded-xl opacity-60 w-5/12 justify-end";
+            } else {
+                turnText.textContent = "תור שחור";
+                turnBadge.className = "px-3 py-1 rounded-full text-xs font-black uppercase bg-slate-950 text-amber-400 border border-amber-500/40 flex items-center gap-1.5 shadow-md";
+                turnDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+                blackBox.className = "flex items-center gap-2 p-2 rounded-xl bg-slate-800/80 border border-slate-700 shadow-md w-5/12 justify-end";
+                whiteBox.className = "flex items-center gap-2 p-2 rounded-xl opacity-60 w-5/12";
+            }
+        }
+
+        function updateLastMoveLog(from, to, isCapture, isKinged) {
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+            const fromStr = `${cols[from.c]}${8 - from.r}`;
+            const toStr = `${cols[to.c]}${8 - to.r}`;
+
+            let text = `${turn === WHITE ? 'לבן' : 'שחור'}: ${fromStr} ← ${toStr}`;
+            if (isCapture) text += ' (אכילה!)';
+            if (isKinged) text += ' 👑 הוכתר למלכה!';
+
+            document.getElementById('last-move-text').textContent = text;
+        }
+
+        // Rules Modal handlers
+        function openRulesModal() {
+            const modal = document.getElementById('rules-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-95');
+            modal.querySelector('.transform').classList.add('scale-100');
+        }
+
+        function closeRulesModal() {
+            const modal = document.getElementById('rules-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.transform').classList.remove('scale-100');
+            modal.querySelector('.transform').classList.add('scale-95');
+        }
+
+        // Victory Canvas Confetti Animation
+        let confettiAnimationId = null;
+        function startConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = Array.from({ length: 80 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                size: Math.random() * 8 + 4,
+                color: ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899'][Math.floor(Math.random() * 5)],
+                speedY: Math.random() * 3 + 2,
+                speedX: Math.random() * 2 - 1,
+                rotation: Math.random() * 360,
+                rotSpeed: Math.random() * 4 - 2
+            }));
+
+            function animateConfetti() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.y += p.speedY;
+                    p.x += p.speedX;
+                    p.rotation += p.rotSpeed;
+
+                    if (p.y > canvas.height) p.y = -10;
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate((p.rotation * Math.PI) / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    ctx.restore();
+                });
+                confettiAnimationId = requestAnimationFrame(animateConfetti);
+            }
+            animateConfetti();
+        }
+
+        function stopConfetti() {
+            if (confettiAnimationId) {
+                cancelAnimationFrame(confettiAnimationId);
+                const canvas = document.getElementById('confetti-canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // Resize Canvas Handler
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('confetti-canvas');
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        });
+
+        // Initialize Game on Window Load
+        window.onload = function() {
+            initBoard();
+        };
+    </script>
+</body>
+</html>
