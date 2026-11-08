@@ -419,4 +419,163 @@
 
             if (turn === 'red') {
                 turnBadge.innerText = 'תור אדום';
-                turnBadge.className = 'px-3 py-1 bg-red-500/20 border border-red-500/40 text-re
+                turnBadge.className = 'px-3 py-1 bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-bold rounded-full animate-pulse';
+                p1Status.classList.remove('opacity-60');
+                p2Status.classList.add('opacity-60');
+            } else {
+                turnBadge.innerText = 'תור לבן';
+                turnBadge.className = 'px-3 py-1 bg-slate-200/20 border border-slate-200/40 text-slate-200 text-xs font-bold rounded-full animate-pulse';
+                p2Status.classList.remove('opacity-60');
+                p1Status.classList.add('opacity-60');
+            }
+
+            if (analysis.hasCaptures) {
+                statusMsg.innerText = '⚠️ יש חובת אכילה (שרופים)! חייב לאכול.';
+                statusMsg.className = 'text-xs text-red-400 font-bold';
+            } else if (jumpInProgress) {
+                statusMsg.innerText = '🔄 ממשיך רצף אכילה!';
+                statusMsg.className = 'text-xs text-amber-400 font-bold';
+            } else {
+                statusMsg.innerText = selectedPiece ? 'בחר משבצת ירוקה להזזה' : 'בחר כלי להזזה';
+                statusMsg.className = 'text-xs text-slate-400 font-medium';
+            }
+        }
+
+        function handleCellClick(r, c) {
+            const piece = board[r][c];
+
+            // If clicking own piece
+            if (piece && piece.player === turn) {
+                if (jumpInProgress) {
+                    // Can only select the piece currently jumping
+                    if (jumpInProgress.r === r && jumpInProgress.c === c) {
+                        selectedPiece = { r, c };
+                        renderBoard();
+                    }
+                    return;
+                }
+
+                // If forced captures exist, can only select pieces with captures
+                if (forcedJumps.length > 0) {
+                    const isForced = forcedJumps.some(p => p.r === r && p.c === c);
+                    if (!isForced) return;
+                }
+
+                selectedPiece = { r, c };
+                renderBoard();
+                return;
+            }
+
+            // If clicking a valid move destination
+            if (selectedPiece) {
+                const matchedMove = validMoves.find(m => m.fromR === selectedPiece.r && m.fromC === selectedPiece.c && m.toR === r && m.toC === c);
+                if (matchedMove) {
+                    executeMove(matchedMove);
+                }
+            }
+        }
+
+        function executeMove(move) {
+            const piece = board[move.fromR][move.fromC];
+
+            // Move piece
+            board[move.toR][move.toC] = piece;
+            board[move.fromR][move.fromC] = null;
+
+            let didCapture = false;
+
+            if (move.captured) {
+                board[move.captured.r][move.captured.c] = null;
+                didCapture = true;
+                capturedCount[turn]++;
+                playSound('capture');
+            } else {
+                playSound('move');
+            }
+
+            // Check King promotion
+            const targetRow = piece.player === 'red' ? 7 : 0;
+            if (!piece.king && move.toR === targetRow) {
+                piece.king = true;
+                playSound('king');
+            }
+
+            // Check for multi-jump continuation
+            if (didCapture) {
+                jumpInProgress = { r: move.toR, c: move.toC };
+                const nextCaptures = getCapturesForPiece(move.toR, move.toC);
+                
+                if (nextCaptures.length > 0) {
+                    selectedPiece = { r: move.toR, c: move.toC };
+                    updateGame();
+                    return; // Keep turn for multi-jump
+                }
+            }
+
+            // End of turn
+            jumpInProgress = null;
+            selectedPiece = null;
+            turn = turn === 'red' ? 'white' : 'red';
+
+            // Check win condition
+            checkWinCondition();
+            updateGame();
+        }
+
+        function checkWinCondition() {
+            const redAnalysis = calculateAllMoves('red');
+            const whiteAnalysis = calculateAllMoves('white');
+
+            let redHasPieces = false;
+            let whiteHasPieces = false;
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c]?.player === 'red') redHasPieces = true;
+                    if (board[r][c]?.player === 'white') whiteHasPieces = true;
+                }
+            }
+
+            if (!redHasPieces || redAnalysis.moves.length === 0 && turn === 'red') {
+                alert('🎉 שחקן לבן ניצח!');
+                initBoard();
+            } else if (!whiteHasPieces || whiteAnalysis.moves.length === 0 && turn === 'white') {
+                alert('🎉 שחקן אדום ניצח!');
+                initBoard();
+            }
+        }
+
+        // Modal Controls & Event Listeners
+        const modal = document.getElementById('welcome-modal');
+        const startBtn = document.getElementById('start-game-btn');
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        startBtn.addEventListener('click', closeModal);
+        startBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            closeModal();
+        });
+
+        document.getElementById('rules-btn').addEventListener('click', () => {
+            modal.style.display = 'flex';
+        });
+
+        document.getElementById('flip-btn').addEventListener('click', () => {
+            isFlipped = !isFlipped;
+            renderBoard();
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            if (confirm('האם להתחיל משחק חדש?')) {
+                initBoard();
+            }
+        });
+
+        // Initialize on load
+        initBoard();
+    </script>
+</body>
+</html>
