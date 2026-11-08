@@ -1,821 +1,422 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>דמקה ישראלית</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=Secular+One&display=swap">
-<style>
-/* Layout: one narrow column built for a phone held upright.
-   Lobby first, then opponent strip / board / your strip / status / actions.
-   The board is a physical object (oxblood and bone) on a felt table, so board and piece colors stay the same in both themes. */
-:root{
-  --felt:#10241f; --panel:#183229; --ink:#f1ede4; --dim:#a8b9ae; --line:rgba(255,255,255,.14);
-  --brass:#e2b04a; --on-brass:#241a05; --accent-text:#e2b04a; --ok:#7bdca4; --warn:#ffa085;
-  --sq-dark:#6c2027; --sq-light:#e7ddc7; --frame:#3b1317;
-  --r1:#ff7345; --r2:#d1301a; --rrim:#ffd5c2; --rcrown:#fff3e8;
-  --w1:#fffdf6; --w2:#d8d0bd; --wrim:#9a917f; --wcrown:#7a1b20;
-  --font-display:'Secular One','Heebo',system-ui,sans-serif;
-  --font-body:'Heebo',system-ui,sans-serif;
-  color-scheme:dark;
-}
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --felt:#dfe9e1; --panel:#f5f8f4; --ink:#14261f; --dim:#4a6158; --line:rgba(0,0,0,.16);
-    --brass:#d39a1e; --on-brass:#1b1300; --accent-text:#7d5200; --ok:#0f7a55; --warn:#b3361b;
-    color-scheme:light;
-  }
-}
-:root[data-theme="light"]{
-  --felt:#dfe9e1; --panel:#f5f8f4; --ink:#14261f; --dim:#4a6158; --line:rgba(0,0,0,.16);
-  --brass:#d39a1e; --on-brass:#1b1300; --accent-text:#7d5200; --ok:#0f7a55; --warn:#b3361b;
-  color-scheme:light;
-}
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-html,body{min-height:100%}
-body{
-  margin:0; background:var(--felt); color:var(--ink);
-  font-family:var(--font-body); font-size:15px; line-height:1.45;
-  padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-bottom,0px));
-  padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px));
-  -webkit-user-select:none; user-select:none; touch-action:manipulation;
-  -webkit-tap-highlight-color:transparent;
-}
-#app{direction:rtl}
-.wrap{max-width:480px; margin-inline:auto; display:flex; flex-direction:column; gap:12px; min-width:0}
-button{font:inherit; color:inherit}
-button:focus-visible,input:focus-visible{outline:3px solid var(--brass); outline-offset:2px}
-
-.btn{
-  font-weight:700; min-height:46px; padding:10px 16px; border-radius:10px;
-  border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer;
-}
-.btn:active{transform:translateY(1px)}
-.btn.pri{background:var(--brass); color:var(--on-brass); border-color:transparent}
-.btn.ghost{background:transparent; min-height:38px; padding:6px 12px; font-size:13px; font-weight:500}
-.btn[disabled]{opacity:.5; cursor:default}
-
-/* Lobby */
-#lobby{padding-top:6vh}
-.hero{display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center}
-.demo{display:flex; gap:10px; direction:ltr}
-.demo .pc{width:46px; height:46px}
-h1{font-family:var(--font-display); font-weight:400; font-size:40px; line-height:1.1; margin:6px 0 0; text-wrap:balance}
-.sub{margin:0; color:var(--dim); max-width:30ch}
-.card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px}
-label{font-size:13px; font-weight:700; color:var(--dim)}
-input[type=text]{
-  width:100%; min-height:50px; padding:10px 14px; border-radius:10px; border:1px solid var(--line);
-  background:var(--felt); color:var(--ink); font:inherit; font-size:18px; font-weight:700; text-align:center;
-  -webkit-user-select:text; user-select:text;
-}
-.row{display:flex; gap:10px; flex-wrap:wrap}
-.row .btn{flex:1 1 140px}
-.msg{min-height:22px; font-size:13px; color:var(--warn); text-align:center}
-.link{align-self:center; background:none; border:0; color:var(--accent-text); font-weight:700; padding:8px; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
-
-/* Game */
-.bar{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
-.chip{display:flex; align-items:center; gap:8px; padding:4px 6px 4px 10px; border:1px solid var(--line); border-radius:999px; background:var(--panel); min-width:0}
-.chip .nm{font-weight:700; max-width:14ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:ltr; unicode-bidi:plaintext}
-.dot{width:9px; height:9px; border-radius:50%; background:var(--warn); flex:none}
-.dot.on{background:var(--ok)}
-.bar-actions{display:flex; gap:2px}
-
-.pl{display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid var(--line); border-radius:12px; background:var(--panel); min-height:54px}
-.pl.on{border-color:var(--brass); box-shadow:0 0 0 1px var(--brass)}
-.pl .pn{font-family:var(--font-display); font-size:18px}
-.pl .tag{font-size:12px; color:var(--dim); border:1px solid var(--line); border-radius:999px; padding:1px 8px}
-.pl .wins{margin-inline-start:auto; display:flex; align-items:baseline; gap:6px}
-.pl .wins b{font-family:var(--font-display); font-weight:400; font-size:26px; font-variant-numeric:tabular-nums}
-.pl .wins small{color:var(--dim); font-size:12px}
-.pc.mini{width:24px; height:24px; box-shadow:0 2px 0 rgba(0,0,0,.4), inset 0 0 0 2px var(--rim)}
-
-.board{
-  direction:ltr; display:grid; grid-template-columns:repeat(8,1fr); aspect-ratio:1;
-  width:min(100%,72vh); margin-inline:auto;
-  border:6px solid var(--frame); border-radius:10px; overflow:hidden;
-  box-shadow:0 14px 30px rgba(0,0,0,.35);
-}
-.sq{position:relative; display:grid; place-items:center; min-width:0}
-.sq.dk{background:var(--sq-dark)}
-.sq.lt{background:var(--sq-light)}
-.sq.sel{box-shadow:inset 0 0 0 3px var(--brass)}
-.sq.dest{cursor:pointer}
-.sq.dest::after{content:""; position:absolute; width:30%; aspect-ratio:1; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px rgba(0,0,0,.28)}
-.board.idle{opacity:.55}
-
-.pc{
-  position:relative; width:80%; aspect-ratio:1; border-radius:50%; display:grid; place-items:center;
-  box-shadow:0 3px 0 rgba(0,0,0,.45), inset 0 0 0 3px var(--rim), inset 0 0 0 6px rgba(0,0,0,.14);
-  transition:transform .12s;
-}
-.pc.r{background:radial-gradient(circle at 35% 30%,var(--r1),var(--r2) 72%); --rim:var(--rrim); color:var(--rcrown)}
-.pc.w{background:radial-gradient(circle at 35% 30%,var(--w1),var(--w2) 76%); --rim:var(--wrim); color:var(--wcrown)}
-.pc svg{width:58%; height:58%; fill:currentColor}
-.sq.sel .pc{transform:translateY(-2px) scale(1.06)}
-.pc.dead{opacity:.28; filter:grayscale(.6); transform:scale(.86)}
-.pc.must::after{content:""; position:absolute; inset:-4px; border-radius:50%; border:2px solid var(--brass); animation:ring 1.4s ease-out infinite}
-@keyframes ring{from{opacity:.95; transform:scale(.92)} to{opacity:0; transform:scale(1.28)}}
-.turn{width:8px; height:8px; border-radius:50%; background:var(--brass); opacity:0}
-.pl.on .turn{opacity:1; animation:blink 1.2s ease-in-out infinite}
-@keyframes blink{50%{opacity:.25}}
-@media (prefers-reduced-motion: reduce){
-  .pc.must::after,.pl.on .turn{animation:none}
-  .pc{transition:none}
-}
-
-.status{display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:32px; font-weight:700}
-.status .tx{min-width:0}
-.status .tx.ok{color:var(--ok)} .status .tx.warn{color:var(--warn)} .status .tx.dim{color:var(--dim)}
-.status .dr{font-size:13px; color:var(--dim); font-weight:500; white-space:nowrap; font-variant-numeric:tabular-nums}
-.actions{display:flex; gap:10px}
-.actions .btn{flex:1}
-.foot{text-align:center; font-size:12px; color:var(--dim); padding-top:4px}
-
-/* Sheets */
-.ov{
-  position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center;
-  padding-top:max(16px,env(safe-area-inset-top,0px)); padding-bottom:max(16px,env(safe-area-inset-bottom,0px));
-  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
-  direction:rtl;
-}
-.sheet{width:100%; max-width:440px; max-height:86vh; overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:12px}
-.sheet h2{font-family:var(--font-display); font-weight:400; font-size:26px; margin:0; text-wrap:balance}
-.sheet p{margin:0; color:var(--dim)}
-.sheet ul{margin:0; padding-inline-start:20px; display:flex; flex-direction:column; gap:8px}
-.sheet li b{color:var(--accent-text)}
-.sheet .score{font-variant-numeric:tabular-nums; color:var(--ink); font-weight:700}
-.stack{display:flex; flex-direction:column; gap:8px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>דמקה ישראלית</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap');
+        body {
+            font-family: 'Heebo', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+        }
+        /* سفاح / Glow effects */
+        .glow-mandatory {
+            box-shadow: inset 0 0 15px rgba(239, 68, 68, 0.9);
+            animation: pulse-red 1.5s infinite;
+        }
+        .glow-selected {
+            box-shadow: inset 0 0 15px rgba(59, 130, 246, 0.9);
+        }
+        .glow-valid {
+            box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.9);
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.7); }
+            50% { box-shadow: inset 0 0 20px rgba(239, 68, 68, 1); }
+            100% { box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.7); }
+        }
+    </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 select-none">
 
-<div id="app" dir="rtl" lang="he">
-  <div class="wrap">
-
-    <section id="lobby">
-      <div class="wrap">
-        <div class="hero">
-          <div class="demo" aria-hidden="true">
-            <span class="pc r"></span>
-            <span class="pc w"></span>
-            <span class="pc r"><svg viewBox="0 0 24 24"><path d="M3 18h18v2H3zM2.5 7l5 4 4.5-7 4.5 7 5-4-1.8 9.5H4.3z"/></svg></span>
-          </div>
-          <h1>דמקה ישראלית</h1>
-          <p class="sub">שחקו עם חבר מכל טלפון, עם שרופים ומלכה מעופפת.</p>
+    <!-- Modal / Welcome Screen -->
+    <div id="welcome-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center flex flex-col gap-4">
+            <div class="text-4xl">🔴👑⚪</div>
+            <h1 class="text-2xl font-black text-amber-400">דמקה ישראלית</h1>
+            <div class="text-xs sm:text-sm text-slate-300 text-right space-y-2 bg-slate-900/60 p-3 rounded-xl max-h-60 overflow-y-auto">
+                <p>🔹 <strong>חובה לאכול ("שרופים"):</strong> אם יש אפשרות אכילה - חייבים לאכול!</p>
+                <p>🔹 <strong>אכילה אחורה:</strong> חייל רגיל <strong>לא יכול</strong> לאכול אחורה במכה הראשונה של התור. רק מהאכילה השנייה ואילך ברצף (multi-jump) מותר לאכול גם אחורה.</p>
+                <p>🔹 <strong>מלכה מעופפת:</strong> יכולה לזוז ולעוף באלכסון כמה שתרצה, כל עוד אין דילוג על יותר מחייל יריב אחד או חייל עצמי.</p>
+                <p>🔹 <strong>נחיתת מלכה אחרי אכילה:</strong> כשהמלכה אוכלת חייל יריב, היא יכולה לנחות <strong>בכל משבצת פתוחה שתרצה בהמשך האלכסון</strong> (ולא רק מיד אחריו), כל עוד אין חייל נוסף בדרך.</p>
+            </div>
+            <button id="start-game-btn" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-xl shadow-lg transition-transform active:scale-95 text-lg cursor-pointer">
+                בואו נתחיל! 🚀
+            </button>
         </div>
-        <div class="card">
-          <label for="room-input">שם החדר</label>
-          <input id="room-input" type="text" maxlength="14" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="למשל daniel123">
-          <div class="row">
-            <button class="btn pri" id="create-btn" type="button">צור חדר (אדום)</button>
-            <button class="btn" id="join-btn" type="button">הצטרף (לבן)</button>
-          </div>
-          <div class="msg" id="lobby-msg" role="status"></div>
-          <button class="link" id="local-btn" type="button">משחק על אותו מכשיר</button>
+    </div>
+
+    <!-- Header -->
+    <header class="w-full max-w-md flex items-center justify-between px-2 py-2">
+        <div class="flex items-center gap-2">
+            <span class="text-xl font-black tracking-wider text-amber-400">דמקה ישראלית</span>
         </div>
-        <div class="foot">פותח עבור דניאל זק</div>
-      </div>
-    </section>
+        <div class="flex items-center gap-2">
+            <button id="flip-btn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1">
+                🔄 הפוך לוח
+            </button>
+            <button id="rules-btn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition">
+                📜 חוקים
+            </button>
+        </div>
+    </header>
 
-    <section id="game" hidden>
-      <div class="wrap">
-        <header class="bar">
-          <div class="chip">
-            <span class="dot" id="conn"></span>
-            <span class="nm" id="room-name"></span>
-            <button class="btn ghost" id="copy-btn" type="button">העתק</button>
-          </div>
-          <div class="bar-actions">
-            <button class="btn ghost" id="sound-btn" type="button"></button>
-            <button class="btn ghost" id="rules-btn" type="button">חוקים</button>
-            <button class="btn ghost" id="exit-btn" type="button">יציאה</button>
-          </div>
-        </header>
-        <div class="pl" id="pl-top"></div>
-        <div id="board" class="board" role="grid" aria-label="לוח דמקה"></div>
-        <div class="pl" id="pl-bottom"></div>
-        <div class="status"><span class="tx" id="status" aria-live="polite"></span><span class="dr" id="draws"></span></div>
-        <div class="actions" id="actions"></div>
-      </div>
-    </section>
+    <!-- Main Game Area -->
+    <main class="w-full max-w-md flex flex-col items-center gap-3 my-auto">
+        <!-- Turn Indicator & Scores -->
+        <div class="w-full flex items-center justify-between bg-slate-800/90 border border-slate-700/80 px-4 py-2.5 rounded-xl shadow">
+            <div id="player1-status" class="flex items-center gap-2 transition-all">
+                <div class="w-4 h-4 rounded-full bg-red-500 shadow-md"></div>
+                <span class="text-sm font-bold">שחקן אדום</span>
+                <span id="p1-score" class="text-xs bg-slate-900 px-2 py-0.5 rounded text-red-400 font-mono">0 חוסלו</span>
+            </div>
+            <div id="turn-badge" class="px-3 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold rounded-full animate-pulse">
+                תור אדום
+            </div>
+            <div id="player2-status" class="flex items-center gap-2 opacity-60 transition-all">
+                <span id="p2-score" class="text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-300 font-mono">0 חוסלו</span>
+                <span class="text-sm font-bold">שחקן לבן</span>
+                <div class="w-4 h-4 rounded-full bg-slate-200 shadow-md"></div>
+            </div>
+        </div>
 
-  </div>
-</div>
+        <!-- Board Container -->
+        <div class="relative w-full aspect-square bg-slate-800 p-2 rounded-2xl shadow-2xl border-4 border-slate-700">
+            <div id="board" class="board-grid w-full h-full rounded-lg overflow-hidden border border-slate-900"></div>
+        </div>
 
-<div class="ov" id="overlay" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+        <!-- Action / Status Bar -->
+        <div class="w-full flex items-center justify-between px-2">
+            <div id="status-message" class="text-xs text-slate-400 font-medium">
+                בחר כלי להזזה
+            </div>
+            <button id="restart-btn" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold rounded-lg border border-red-500/30 transition">
+                משחק חדש 🔄
+            </button>
+        </div>
+    </main>
 
-<script>
-(function(){
-'use strict';
+    <!-- Footer / Credit -->
+    <footer class="text-center text-xs text-slate-500 py-1">
+        דמקה ישראלית • משחק מקומי לשני שחקנים
+    </footer>
 
-// ==LOGIC-START==
-const DIRS=[[1,1],[1,-1],[-1,1],[-1,-1]];
-const inb=(r,c)=>r>=0&&r<8&&c>=0&&c<8;
-const own=ch=>ch==='.'?null:ch.toLowerCase();
-const isK=ch=>ch==='R'||ch==='W';
-const other=p=>p==='r'?'w':'r';
+    <!-- Game Logic Script -->
+    <script>
+        // Audio Synthesizer (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
 
-function initialBoard(){
-  const a=[];
-  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-    let ch='.';
-    if((r+c)%2===1){ if(r<3) ch='w'; else if(r>4) ch='r'; }
-    a.push(ch);
-  }
-  return a.join('');
-}
-function newState(prev,u){
-  const s=prev?prev.s.slice():[0,0,0];
-  const games=s[0]+s[1]+s[2];
-  return {b:initialBoard(),t:games%2===0?'r':'w',s,j:-1,x:[],q:prev?prev.q+1:1,u,o:null};
-}
-function capturesFrom(B,dead,i,first){
-  const ch=B[i]; if(ch==='.') return [];
-  const me=own(ch), r=i>>3, c=i&7, out=[];
-  if(!isK(ch)){
-    const fwd=me==='r'?-1:1;
-    for(const [dr,dc] of DIRS){
-      if(first && dr!==fwd) continue;
-      const lr=r+2*dr, lc=c+2*dc;
-      if(!inb(lr,lc)) continue;
-      const ei=(r+dr)*8+(c+dc), li=lr*8+lc;
-      if(B[ei]!=='.' && own(B[ei])!==me && !dead.has(ei) && B[li]==='.') out.push({from:i,to:li,cap:ei});
-    }
-  } else {
-    for(const [dr,dc] of DIRS){
-      let rr=r+dr, cc=c+dc, enemy=-1;
-      while(inb(rr,cc)){
-        const k=rr*8+cc, x=B[k];
-        if(enemy<0){
-          if(x!=='.'){
-            if(own(x)===me || dead.has(k)) break;
-            enemy=k;
-          }
-        } else {
-          if(x==='.') out.push({from:i,to:k,cap:enemy}); else break;
+            if (type === 'move') {
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'capture') {
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'king') {
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
         }
-        rr+=dr; cc+=dc;
-      }
-    }
-  }
-  return out;
-}
-function stepsFrom(B,i){
-  const ch=B[i], me=own(ch), r=i>>3, c=i&7, out=[];
-  if(!isK(ch)){
-    const dr=me==='r'?-1:1;
-    for(const dc of [-1,1]){
-      const rr=r+dr, cc=c+dc;
-      if(inb(rr,cc) && B[rr*8+cc]==='.') out.push({from:i,to:rr*8+cc,cap:null});
-    }
-  } else {
-    for(const [dr,dc] of DIRS){
-      let rr=r+dr, cc=c+dc;
-      while(inb(rr,cc) && B[rr*8+cc]==='.'){ out.push({from:i,to:rr*8+cc,cap:null}); rr+=dr; cc+=dc; }
-    }
-  }
-  return out;
-}
-function legalMoves(st){
-  const B=st.b, dead=new Set(st.x), me=st.t;
-  if(st.j>=0) return capturesFrom(B,dead,st.j,false);
-  const caps=[];
-  for(let i=0;i<64;i++) if(own(B[i])===me && !dead.has(i)) caps.push(...capturesFrom(B,dead,i,true));
-  if(caps.length) return caps;
-  const mv=[];
-  for(let i=0;i<64;i++) if(own(B[i])===me) mv.push(...stepsFrom(B,i));
-  return mv;
-}
-function applyMove(st,mv,u){
-  const B=st.b.split(''), dead=new Set(st.x);
-  let ch=B[mv.from]; B[mv.from]='.';
-  if(!isK(ch)){
-    const row=mv.to>>3;
-    if((ch==='r'&&row===0)||(ch==='w'&&row===7)) ch=ch.toUpperCase();
-  }
-  B[mv.to]=ch;
-  if(mv.cap!==null){
-    dead.add(mv.cap);
-    if(capturesFrom(B,dead,mv.to,false).length){
-      return {...st,b:B.join(''),x:[...dead],j:mv.to,q:st.q+1,u,s:st.s.slice(),o:null};
-    }
-    dead.forEach(d=>{B[d]='.';});
-  }
-  const mover=st.t;
-  const ns={...st,b:B.join(''),x:[],j:-1,t:other(mover),q:st.q+1,u,s:st.s.slice(),o:null};
-  if(legalMoves(ns).length===0){ ns.s[mover==='r'?0:1]++; ns.o={w:mover,why:'win'}; }
-  return ns;
-}
-function finish(st,kind,who,u){
-  const s=st.s.slice(), B=st.b.split('');
-  st.x.forEach(d=>{B[d]='.';});
-  let o;
-  if(kind==='draw'){ s[2]++; o={w:'d',why:'draw'}; }
-  else { const win=other(who); s[win==='r'?0:1]++; o={w:win,why:'resign'}; }
-  return {...st,b:B.join(''),x:[],j:-1,s,o,q:st.q+1,u};
-}
-// ==LOGIC-END==
 
-/* ---------- elements ---------- */
-const $=id=>document.getElementById(id);
-const lobbyEl=$('lobby'), gameEl=$('game'), boardEl=$('board'), statusEl=$('status'), drawsEl=$('draws');
-const plTop=$('pl-top'), plBottom=$('pl-bottom'), actionsEl=$('actions');
-const overlay=$('overlay'), sheet=$('sheet');
-const roomInput=$('room-input'), lobbyMsg=$('lobby-msg');
+        // Game State
+        let board = [];
+        let turn = 'red'; // 'red' or 'white'
+        let selectedPiece = null; // {r, c}
+        let validMoves = []; // Array of move objects
+        let isFlipped = false;
+        let forcedJumps = []; // Pieces that MUST capture
+        let jumpInProgress = null; // {r, c} if in middle of multi-jump chain
+        let capturedCount = { red: 0, white: 0 };
 
-const CROWN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18v2H3zM2.5 7l5 4 4.5-7 4.5 7 5-4-1.8 9.5H4.3z"/></svg>';
-const NAME={r:'אדום',w:'לבן'};
-const U=Math.random().toString(36).slice(2,8);
-
-/* ---------- state ---------- */
-let mode='lobby';          // lobby | online | local
-let R=null, offs=[];
-let roomName='', myRole='?';   // r | w | s (watching) | ?
-let connected=false, oppPresent=false, lastPeers=[];
-let cur=null, selected=-1, hint='', hintTimer=0;
-let curMoves=[], curDead=new Set(), mustCapture=false;
-let overShownQ=-1, sheetKind='';
-
-/* ---------- sound ---------- */
-let ac=null, soundOn=true;
-try{ soundOn=localStorage.getItem('dama-sound')!=='off'; }catch(e){}
-function ensureAudio(){
-  try{
-    if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)();
-    if(ac.state==='suspended') ac.resume();
-  }catch(e){}
-}
-function tone(f0,f1,len,vol,delay){
-  const t=ac.currentTime+(delay||0), o=ac.createOscillator(), g=ac.createGain();
-  o.connect(g); g.connect(ac.destination);
-  o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+len);
-  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.01,t+len);
-  o.start(t); o.stop(t+len);
-}
-function beep(kind){
-  if(!soundOn||!ac) return;
-  try{
-    if(kind==='move') tone(300,150,.1,.1);
-    else if(kind==='capture') tone(500,200,.2,.2);
-    else if(kind==='king') tone(400,800,.3,.2);
-    else if(kind==='win'){ tone(440,660,.18,.2); tone(660,990,.3,.2,.18); }
-  }catch(e){}
-}
-function soundLabel(){ $('sound-btn').textContent=soundOn?'צליל: פועל':'צליל: כבוי'; }
-
-/* ---------- room ids ---------- */
-function toRoomId(raw){
-  const s=raw.trim().toLowerCase();
-  let id='g-'+[...s].map(ch=>/[a-z0-9]/.test(ch)?ch:'.'+ch.codePointAt(0).toString(36)).join('');
-  if(id.length>48){
-    let h=5381; for(const ch of s) h=((h*33)^ch.codePointAt(0))>>>0;
-    id='g-h'+h.toString(36);
-  }
-  return id;
-}
-
-/* ---------- connection to the room ---------- */
-/* Room over PeerJS: the first player to claim the room id is the host and relays
-   everyone's presence; the others connect to it. If the host leaves, the rest
-   re-elect one and re-send their own state. Same interface the game code expects. */
-function joinPeerRoom(roomId){
-  const hostId='dama-'+roomId.replace(/\./g,'_');
-  const OPTS={debug:0};
-  const merge=(a,p)=>{ const o={...a}; for(const k in p){ if(p[k]===null) delete o[k]; else o[k]=p[k]; } return o; };
-  const peerSubs=new Set(), connSubs=new Set();
-  let peer=null, myId=null, isHost=false, alive=true, up=false, firstDone=false, retry=0;
-  let mine={}, table=new Map(), hostConns=new Map(), upstream=null, snap=[];
-  let resolveJoin, rejectJoin;
-  const joined=new Promise((res,rej)=>{ resolveJoin=res; rejectJoin=rej; });
-
-  function pushPeers(){
-    snap=[...table].map(([id,p])=>({peer:id,by:null,isMe:id===myId,sameTab:id===myId,kind:'viewer',guest:false,presence:p,updatedAt:Date.now()}));
-    const ch={peers:snap,joined:[],left:[],updated:[]};
-    peerSubs.forEach(f=>{ try{ f(ch); }catch(e){} });
-  }
-  function setUp(v){
-    if(up===v) return;
-    up=v;
-    connSubs.forEach(f=>{ try{ f(v); }catch(e){} });
-    if(v&&!firstDone){ firstDone=true; resolveJoin(room); }
-  }
-  function broadcast(){
-    const msg={t:'snap',peers:[...table].map(([id,p])=>({id,p}))};
-    hostConns.forEach(c=>{ try{ if(c.open) c.send(msg); }catch(e){} });
-    pushPeers();
-  }
-  const later=(fn,ms)=>setTimeout(()=>{ if(alive) fn(); },ms);
-  function drop(){ try{ if(peer) peer.destroy(); }catch(e){} peer=null; upstream=null; hostConns=new Map(); }
-
-  function boot(){
-    drop(); setUp(false);
-    const p=new Peer(hostId,OPTS); peer=p;
-    p.on('open',id=>{
-      if(!alive||peer!==p) return;
-      myId=id; isHost=true; retry=0;
-      table=new Map([[id,{...mine}]]);
-      setUp(true); pushPeers();
-    });
-    p.on('connection',conn=>{
-      conn.on('open',()=>{ hostConns.set(conn.peer,conn); table.set(conn.peer,{}); broadcast(); });
-      conn.on('data',m=>{
-        if(m&&m.t==='pres'&&m.patch&&typeof m.patch==='object'){
-          table.set(conn.peer,merge(table.get(conn.peer)||{},m.patch)); broadcast();
+        function initBoard() {
+            board = Array(8).fill(null).map(() => Array(8).fill(null));
+            // Red pieces on rows 0, 1, 2 (Top from default view)
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if ((r + c) % 2 === 1) {
+                        board[r][c] = { player: 'red', king: false };
+                    }
+                }
+            }
+            // White pieces on rows 5, 6, 7 (Bottom from default view)
+            for (let r = 5; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if ((r + c) % 2 === 1) {
+                        board[r][c] = { player: 'white', king: false };
+                    }
+                }
+            }
+            turn = 'red';
+            selectedPiece = null;
+            validMoves = [];
+            jumpInProgress = null;
+            capturedCount = { red: 0, white: 0 };
+            updateGame();
         }
-      });
-      const gone=()=>{ if(hostConns.get(conn.peer)===conn){ hostConns.delete(conn.peer); table.delete(conn.peer); broadcast(); } };
-      conn.on('close',gone); conn.on('error',gone);
-    });
-    p.on('disconnected',()=>{ try{ if(alive&&peer===p) p.reconnect(); }catch(e){} });
-    p.on('error',err=>{
-      if(!alive||peer!==p) return;
-      if(err&&err.type==='unavailable-id') client();
-      else { retry++; later(boot,Math.min(1000*retry,5000)); }
-    });
-  }
-  function client(){
-    drop(); setUp(false);
-    const p=new Peer(OPTS); peer=p;
-    let failed=false;
-    const fail=()=>{
-      if(failed||!alive||peer!==p) return;
-      failed=true; retry++; setUp(false); table=new Map(); pushPeers();
-      later(boot,300+Math.random()*1500+retry*300);
-    };
-    p.on('open',id=>{
-      if(!alive||peer!==p) return;
-      myId=id; isHost=false;
-      const c=p.connect(hostId,{reliable:true}); upstream=c;
-      c.on('open',()=>{ if(peer!==p) return; retry=0; setUp(true); c.send({t:'pres',patch:mine}); });
-      c.on('data',m=>{
-        if(m&&m.t==='snap'&&Array.isArray(m.peers)){
-          table=new Map(m.peers.map(e=>[e.id,e.p])); table.set(myId,{...mine}); pushPeers();
+
+        function calculateAllMoves(player, specificPiece = null) {
+            let moves = [];
+            let piecesWithCaptures = [];
+
+            const rows = specificPiece ? [specificPiece.r] : range(0, 8);
+            const cols = specificPiece ? [specificPiece.c] : range(0, 8);
+
+            // First check all captures for the player
+            for (let r of rows) {
+                for (let c of cols) {
+                    const piece = board[r][c];
+                    if (piece && piece.player === player) {
+                        // If a jump is in progress, ONLY this piece can move
+                        if (jumpInProgress && (jumpInProgress.r !== r || jumpInProgress.c !== c)) continue;
+
+                        const pieceCaptures = getCapturesForPiece(r, c);
+                        if (pieceCaptures.length > 0) {
+                            piecesWithCaptures.push({ r, c, moves: pieceCaptures });
+                        }
+                    }
+                }
+            }
+
+            if (piecesWithCaptures.length > 0) {
+                // Mandatory capture rule ("שרופים")
+                piecesWithCaptures.forEach(item => {
+                    moves.push(...item.moves.map(m => ({ ...m, isCapture: true })));
+                });
+                return { moves, hasCaptures: true, activePieces: piecesWithCaptures.map(p => ({ r: p.r, c: p.c })) };
+            }
+
+            // If a jump is in progress, non-capture is not allowed
+            if (jumpInProgress) {
+                return { moves: [], hasCaptures: false, activePieces: [] };
+            }
+
+            // If no captures, check normal moves
+            for (let r of rows) {
+                for (let c of cols) {
+                    const piece = board[r][c];
+                    if (piece && piece.player === player) {
+                        const normalMoves = getNormalMovesForPiece(r, c);
+                        moves.push(...normalMoves.map(m => ({ ...m, isCapture: false })));
+                    }
+                }
+            }
+
+            return { moves, hasCaptures: false, activePieces: [] };
         }
-      });
-      c.on('close',fail); c.on('error',fail);
-    });
-    p.on('error',fail);
-  }
 
-  const room={
-    peers:()=>snap,
-    connected:()=>up,
-    onPeers:h=>{
-      peerSubs.add(h);
-      queueMicrotask(()=>{ if(peerSubs.has(h)){ try{ h({peers:snap,joined:snap,left:[],updated:[]}); }catch(e){} } });
-      return ()=>peerSubs.delete(h);
-    },
-    onConnection:h=>{
-      connSubs.add(h);
-      queueMicrotask(()=>{ if(connSubs.has(h)){ try{ h(up); }catch(e){} } });
-      return ()=>connSubs.delete(h);
-    },
-    presence:patch=>{
-      mine=merge(mine,patch);
-      if(myId){
-        table.set(myId,{...mine});
-        if(isHost) broadcast();
-        else { try{ if(upstream&&upstream.open) upstream.send({t:'pres',patch}); }catch(e){} pushPeers(); }
-      }
-      return Promise.resolve();
-    },
-    leave:()=>{ alive=false; drop(); peerSubs.clear(); connSubs.clear(); return Promise.resolve(); }
-  };
-  setTimeout(()=>{ if(!firstDone){ alive=false; drop(); rejectJoin(new Error('timeout')); } },15000);
-  boot();
-  return joined;
-}
-const roomReady=Promise.resolve(window.Peer?{join:joinPeerRoom}:null);
+        function range(start, end) {
+            return Array.from({ length: end - start }, (_, i) => start + i);
+        }
 
-function say(t){ lobbyMsg.textContent=t||''; }
+        function getNormalMovesForPiece(r, c) {
+            const piece = board[r][c];
+            if (!piece) return [];
+            let moves = [];
 
-async function enter(want){
-  ensureAudio();
-  const raw=roomInput.value.trim();
-  if(!raw){ say('הקלד שם חדר'); return; }
-  say('מתחבר…');
-  const api=await roomReady;
-  if(!api){ say('לא הצלחתי לטעון את שירות החיבור. בדוק אינטרנט, או שחק על אותו מכשיר.'); return; }
-  let r;
-  try{ r=await api.join(toRoomId(raw)); }
-  catch(e){ say('לא הצלחתי להיכנס לחדר. נסה שוב.'); return; }
-  say('');
-  teardown();
-  R=r; mode='online'; roomName=raw; myRole='?'; cur=null; selected=-1; oppPresent=false; connected=R.connected();
-  overShownQ=-1; closeSheet();
-  showGame();
-  offs=[
-    R.onPeers(onPeers,onRoomError),
-    R.onConnection(c=>{ connected=c; render(); },onRoomError)
-  ];
-  R.presence({role:'?'}).catch(()=>{});
-  setTimeout(()=>decideRole(want),1800);
-  render();
-}
-function onRoomError(){ connected=false; render(); }
+            if (!piece.king) {
+                // Standard piece normal moves: 1 step forward diagonally
+                const fwd = piece.player === 'red' ? 1 : -1;
+                const nextR = r + fwd;
+                [c - 1, c + 1].forEach(nextC => {
+                    if (nextR >= 0 && nextR < 8 && nextC >= 0 && nextC < 8 && !board[nextR][nextC]) {
+                        moves.push({ fromR: r, fromC: c, toR: nextR, toC: nextC, captured: null });
+                    }
+                });
+            } else {
+                // King normal moves: any distance diagonally on empty squares
+                const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                directions.forEach(([dr, dc]) => {
+                    let currR = r + dr;
+                    let currC = c + dc;
+                    while (currR >= 0 && currR < 8 && currC >= 0 && currC < 8) {
+                        if (!board[currR][currC]) {
+                            moves.push({ fromR: r, fromC: c, toR: currR, toC: currC, captured: null });
+                            currR += dr;
+                            currC += dc;
+                        } else {
+                            break;
+                        }
+                    }
+                });
+            }
+            return moves;
+        }
 
-function takenRoles(){
-  const s=new Set();
-  for(const p of R.peers()){
-    if(p.isMe||p.kind!=='viewer') continue;
-    const ro=p.presence&&p.presence.role;
-    if(ro==='r'||ro==='w') s.add(ro);
-  }
-  return s;
-}
-function decideRole(want){
-  if(!R||mode!=='online') return;
-  const taken=takenRoles();
-  let role=want;
-  if(taken.has(role)) role=other(want);
-  if(taken.has(role)) role='s';
-  myRole=role;
-  R.presence({role}).catch(()=>{});
-  if(!cur) { commit(newState(null,U)); } else render();
-}
-const valid=g=>g&&typeof g.b==='string'&&g.b.length===64&&(g.t==='r'||g.t==='w')&&Array.isArray(g.s)&&Array.isArray(g.x)&&typeof g.q==='number'&&typeof g.u==='string';
-const newer=(a,b)=>a.q>b.q||(a.q===b.q&&a.u>b.u);
+        function getCapturesForPiece(r, c) {
+            const piece = board[r][c];
+            if (!piece) return [];
+            let captures = [];
 
-function onPeers(change){
-  lastPeers=change.peers;
-  let best=null;
-  for(const p of lastPeers){
-    const g=p.presence&&p.presence.gs;
-    if(valid(g)&&(!best||newer(g,best))) best=g;
-  }
-  if(best&&(!cur||newer(best,cur))){
-    if(cur&&best.u!==U){
-      const was=cur.b.replace(/\./g,'').length;
-      beep(best.b.replace(/\./g,'').length<was||best.x.length>cur.x.length?'capture':'move');
-      if(best.o&&!cur.o) beep('win');
-    }
-    cur=best; selected=-1; hint='';
-  }
-  if(myRole==='r'||myRole==='w'){
-    const me=lastPeers.find(p=>p.isMe&&p.sameTab);
-    const dupes=lastPeers.filter(p=>!p.isMe&&p.kind==='viewer'&&p.presence&&p.presence.role===myRole);
-    if(me&&dupes.some(p=>p.peer<me.peer)){
-      const alt=other(myRole);
-      const altTaken=lastPeers.some(p=>!p.isMe&&p.presence&&p.presence.role===alt);
-      myRole=altTaken?'s':alt;
-      R.presence({role:myRole}).catch(()=>{});
-    }
-    oppPresent=lastPeers.some(p=>!p.isMe&&p.kind==='viewer'&&p.presence&&p.presence.role===other(myRole));
-  } else oppPresent=lastPeers.some(p=>!p.isMe&&p.presence&&(p.presence.role==='r'||p.presence.role==='w'));
-  render();
-}
+            // Check if standard piece can capture backwards
+            // Rule: Standard piece CANNOT capture backwards on the FIRST jump of a turn. 
+            // It can only capture backwards from the SECOND jump onward (when jumpInProgress is active).
+            const isFirstJump = !jumpInProgress;
 
-function commit(ns){
-  cur=ns;
-  selected=ns.j>=0?ns.j:-1;
-  if(mode==='online'&&R) R.presence({gs:ns}).catch(()=>{});
-  render();
-}
+            if (!piece.king) {
+                const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                directions.forEach(([dr, dc]) => {
+                    // If it's the first jump, forbid purely backward captures relative to player direction
+                    const fwd = piece.player === 'red' ? 1 : -1;
+                    if (isFirstJump && Math.sign(dr) !== fwd) {
+                        return; // Skip backward capture on first jump
+                    }
 
-function teardown(){
-  offs.forEach(f=>{ try{f();}catch(e){} });
-  offs=[];
-  if(R){ try{ R.leave(); }catch(e){} R=null; }
-}
+                    const enemyR = r + dr;
+                    const enemyC = c + dc;
+                    const landR = r + dr * 2;
+                    const landC = c + dc * 2;
 
-/* ---------- views ---------- */
-function showGame(){
-  lobbyEl.hidden=true; gameEl.hidden=false;
-  $('room-name').textContent=mode==='local'?'אותו מכשיר':roomName;
-  $('copy-btn').hidden=mode!=='online';
-  $('conn').hidden=mode!=='online';
-  soundLabel();
-}
-function showLobby(){
-  teardown();
-  mode='lobby'; cur=null; selected=-1; closeSheet();
-  gameEl.hidden=true; lobbyEl.hidden=false;
-}
-function startLocal(){
-  ensureAudio();
-  teardown();
-  mode='local'; myRole='b'; cur=newState(null,U); selected=-1; overShownQ=-1; closeSheet();
-  showGame(); render();
-}
+                    if (enemyR >= 0 && enemyR < 8 && enemyC >= 0 && enemyC < 8 &&
+                        landR >= 0 && landR < 8 && landC >= 0 && landC < 8) {
+                        const target = board[enemyR][enemyC];
+                        const landing = board[landR][landC];
 
-function canAct(){
-  if(!cur||cur.o) return false;
-  if(mode==='local') return true;
-  if(mode!=='online'||!connected) return false;
-  return myRole===cur.t&&oppPresent;
-}
+                        if (target && target.player !== piece.player && !landing) {
+                            captures.push({
+                                fromR: r, fromC: c,
+                                toR: landR, toC: landC,
+                                captured: { r: enemyR, c: enemyC }
+                            });
+                        }
+                    }
+                });
+            } else {
+                // King captures: Fly along diagonal, jump over 1 enemy piece, land on ANY empty square after it
+                const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                directions.forEach(([dr, dc]) => {
+                    let currR = r + dr;
+                    let currC = c + dc;
+                    let foundEnemy = null;
 
-function setHint(t){
-  hint=t; render();
-  clearTimeout(hintTimer);
-  hintTimer=setTimeout(()=>{ hint=''; render(); },2200);
-}
+                    while (currR >= 0 && currR < 8 && currC >= 0 && currC < 8) {
+                        const currentCell = board[currR][currC];
+                        if (!foundEnemy) {
+                            if (currentCell) {
+                                if (currentCell.player === piece.player) {
+                                    break; // Blocked by own piece
+                                } else {
+                                    foundEnemy = { r: currR, c: currC };
+                                }
+                            }
+                        } else {
+                            // Already found an enemy, now collecting valid landing spots
+                            if (!currentCell) {
+                                captures.push({
+                                    fromR: r, fromC: c,
+                                    toR: currR, toC: currC,
+                                    captured: { r: foundEnemy.r, c: foundEnemy.c }
+                                });
+                            } else {
+                                break; // Another piece blocks further landing
+                            }
+                        }
+                        currR += dr;
+                        currC += dc;
+                    }
+                });
+            }
 
-function onSquare(i){
-  ensureAudio();
-  if(!cur||cur.o||!canAct()) return;
-  const ch=cur.b[i];
-  if(ch!=='.'&&own(ch)===cur.t&&!curDead.has(i)){
-    if(cur.j>=0){ if(i===cur.j) selected=i; render(); return; }
-    if(curMoves.some(m=>m.from===i)){ selected=i; render(); return; }
-    selected=-1;
-    setHint(mustCapture?'חובת אכילה, בחר כלי שיכול לאכול':'לכלי הזה אין מהלכים');
-    return;
-  }
-  if(selected>=0){
-    const m=curMoves.find(m=>m.from===selected&&m.to===i);
-    if(m){ doMove(m); return; }
-  }
-  if(cur.j<0) selected=-1;
-  render();
-}
-function doMove(m){
-  const before=cur.b[m.from];
-  const ns=applyMove(cur,m,U);
-  const after=ns.b[m.to];
-  if(ns.o) beep('win');
-  else if(before!==after) beep('king');
-  else beep(m.cap!==null?'capture':'move');
-  commit(ns);
-}
+            return captures;
+        }
 
-/* ---------- render ---------- */
-function resultTitle(st){
-  const o=st.o;
-  if(o.w==='d') return 'תיקו';
-  if(mode==='online'&&(myRole==='r'||myRole==='w')) return o.w===myRole?'ניצחת!':'הפסדת';
-  return NAME[o.w]+' ניצח';
-}
-function resultSub(st){
-  const o=st.o;
-  if(o.w==='d') return 'המשחק הסתיים בתיקו.';
-  if(o.why==='resign') return NAME[other(o.w)]+' פרש.';
-  return 'ל'+NAME[other(o.w)]+' אין מהלכים חוקיים.';
-}
+        function updateGame() {
+            const analysis = calculateAllMoves(turn);
+            forcedJumps = analysis.activePieces;
+            validMoves = analysis.moves;
 
-function statusInfo(){
-  if(mode==='online'){
-    if(!connected) return ['מתחבר לחדר…','dim'];
-    if(myRole==='?'||!cur) return ['נכנס לחדר…','dim'];
-  }
-  if(cur.o) return [resultTitle(cur),'ok'];
-  if(hint) return [hint,'warn'];
-  if(mode==='online'){
-    if(myRole==='s') return ['צופה במשחק, תור '+NAME[cur.t],'dim'];
-    if(!oppPresent) return ['ממתין ליריב. שלח לו את שם החדר.','warn'];
-    if(cur.t!==myRole) return ['תור היריב','dim'];
-  }
-  if(cur.j>=0) return ['המשך רצף האכילה','warn'];
-  if(mustCapture) return ['חובת אכילה, חייבים לאכול','warn'];
-  if(mode==='local') return ['תור '+NAME[cur.t],'ok'];
-  return [selected>=0?'בחר משבצת ירוקה':'התור שלך, בחר כלי','ok'];
-}
+            renderBoard();
+            renderUI(analysis);
+        }
 
-function plHtml(role){
-  const wins=cur?cur.s[role==='r'?0:1]:0;
-  let tag='';
-  if(mode==='online'&&(myRole==='r'||myRole==='w')) tag=role===myRole?'אתה':(oppPresent?'יריב':'לא מחובר');
-  return `<span class="pc mini ${role}"></span><span class="pn">${NAME[role]}</span>${tag?`<span class="tag">${tag}</span>`:''}<span class="turn"></span><span class="wins"><b>${wins}</b><small>ניצחונות</small></span>`;
-}
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
 
-function render(){
-  if(mode==='lobby') return;
-  const view=cur||newState(null,U);
-  curDead=new Set(view.x);
-  curMoves=(cur&&!cur.o)?legalMoves(cur):[];
-  mustCapture=curMoves.some(m=>m.cap!==null);
+            for (let displayR = 0; displayR < 8; displayR++) {
+                for (let displayC = 0; displayC < 8; displayC++) {
+                    const r = isFlipped ? 7 - displayR : displayR;
+                    const c = isFlipped ? 7 - displayC : displayC;
 
-  if(cur&&canAct()&&cur.j>=0) selected=cur.j;
-  if(!cur||!canAct()||(selected>=0&&(view.b[selected]==='.'||own(view.b[selected])!==view.t))) selected=-1;
+                    const isDark = (r + c) % 2 === 1;
+                    const cellEl = document.createElement('div');
+                    cellEl.className = `relative flex items-center justify-center ${isDark ? 'bg-slate-700/80' : 'bg-slate-800/40'} rounded`;
+                    cellEl.dataset.r = r;
+                    cellEl.dataset.c = c;
 
-  const flip=mode==='online'&&myRole==='w';
-  const dests=new Set(selected>=0?curMoves.filter(m=>m.from===selected).map(m=>m.to):[]);
-  const glow=new Set(canAct()&&mustCapture&&view.j<0?curMoves.map(m=>m.from):[]);
-  let h='';
-  for(let dr=0;dr<8;dr++)for(let dc=0;dc<8;dc++){
-    const r=flip?7-dr:dr, c=flip?7-dc:dc, i=r*8+c, ch=view.b[i];
-    const dark=(r+c)%2===1;
-    let pc='';
-    if(ch!=='.'){
-      const k=isK(ch);
-      pc=`<span class="pc ${own(ch)}${curDead.has(i)?' dead':''}${glow.has(i)?' must':''}">${k?CROWN:''}</span>`;
-    }
-    h+=`<div class="sq ${dark?'dk':'lt'}${selected===i?' sel':''}${dests.has(i)?' dest':''}" data-i="${i}" role="gridcell">${pc}</div>`;
-  }
-  boardEl.innerHTML=h;
-  boardEl.classList.toggle('idle',!cur);
+                    const piece = board[r][c];
+                    const isSelected = selectedPiece && selectedPiece.r === r && selectedPiece.c === c;
+                    const isValidMove = validMoves.some(m => m.toR === r && m.toC === c && (!selectedPiece || (m.fromR === selectedPiece.r && m.fromC === selectedPiece.c)));
+                    const isMandatory = forcedJumps.some(p => p.r === r && p.c === c);
 
-  const bottom=(mode==='online'&&(myRole==='r'||myRole==='w'))?myRole:'r';
-  const top=other(bottom);
-  plTop.innerHTML=plHtml(top); plBottom.innerHTML=plHtml(bottom);
-  const live=cur&&!cur.o&&(mode!=='online'||oppPresent);
-  plTop.classList.toggle('on',!!live&&cur.t===top);
-  plBottom.classList.toggle('on',!!live&&cur.t===bottom);
+                    if (isDark && isMandatory && turn === piece?.player && !jumpInProgress) {
+                        cellEl.classList.add('glow-mandatory');
+                    }
+                    if (isSelected) {
+                        cellEl.classList.add('glow-selected');
+                    }
+                    if (isValidMove) {
+                        cellEl.classList.add('glow-valid');
+                        const dot = document.createElement('div');
+                        dot.className = 'w-3 h-3 bg-emerald-400 rounded-full animate-ping absolute';
+                        cellEl.appendChild(dot);
+                    }
 
-  const [tx,tone_]=statusInfo();
-  statusEl.textContent=tx; statusEl.className='tx '+tone_;
-  drawsEl.textContent=cur?'תיקו: '+cur.s[2]:'';
-  $('conn').classList.toggle('on',connected);
+                    if (piece) {
+                        const pieceEl = document.createElement('div');
+                        let bgStyle = piece.player === 'red' 
+                            ? 'bg-gradient-to-br from-red-500 to-red-700 border-red-400 text-red-100' 
+                            : 'bg-gradient-to-br from-slate-100 to-slate-300 border-slate-400 text-slate-800';
+                        
+                        pieceEl.className = `w-4/5 h-4/5 rounded-full shadow-lg border-2 flex items-center justify-center font-bold text-lg transition-transform transform ${bgStyle} ${isSelected ? 'scale-105 ring-2 ring-blue-400' : ''} cursor-pointer`;
+                        if (piece.king) {
+                            pieceEl.innerHTML = '👑';
+                        }
+                        cellEl.appendChild(pieceEl);
+                    }
 
-  const player=mode==='local'||(mode==='online'&&(myRole==='r'||myRole==='w'));
-  let a='';
-  if(player&&cur){
-    if(cur.o) a='<button class="btn pri" type="button" data-act="rematch">משחק חוזר</button>';
-    else a='<button class="btn" type="button" data-act="endsheet">פרישה / תיקו</button>';
-  }
-  actionsEl.innerHTML=a;
+                    cellEl.addEventListener('click', () => handleCellClick(r, c));
+                    boardEl.appendChild(cellEl);
+                }
+            }
+        }
 
-  if(cur&&cur.o&&overShownQ!==cur.q){ overShownQ=cur.q; openOver(); }
-  if(sheetKind==='over'&&(!cur||!cur.o)) closeSheet();
-}
+        function renderUI(analysis) {
+            const turnBadge = document.getElementById('turn-badge');
+            const p1Status = document.getElementById('player1-status');
+            const p2Status = document.getElementById('player2-status');
+            const statusMsg = document.getElementById('status-message');
 
-/* ---------- sheets ---------- */
-function openSheet(kind,html){ sheetKind=kind; sheet.innerHTML=html; overlay.hidden=false; }
-function closeSheet(){ sheetKind=''; overlay.hidden=true; sheet.innerHTML=''; }
+            document.getElementById('p1-score').innerText = `${capturedCount.red} חוסלו`;
+            document.getElementById('p2-score').innerText = `${capturedCount.white} חוסלו`;
 
-function openOver(){
-  const player=mode==='local'||(mode==='online'&&(myRole==='r'||myRole==='w'));
-  openSheet('over',
-    `<h2>${resultTitle(cur)}</h2><p>${resultSub(cur)}</p>
-     <div class="score">אדום ${cur.s[0]} • לבן ${cur.s[1]} • תיקו ${cur.s[2]}</div>
-     <div class="stack">${player?'<button class="btn pri" type="button" data-act="rematch">משחק חוזר</button>':''}<button class="btn" type="button" data-act="close">סגור</button></div>`);
-}
-function openRules(){
-  openSheet('rules',
-    `<h2>חוקי דמקה ישראלית</h2>
-     <ul>
-       <li><b>שרופים:</b> אם אפשר לאכול, חייבים לאכול.</li>
-       <li><b>חייל:</b> זז צעד אחד באלכסון קדימה. באכילה הראשונה בתור הוא אוכל רק קדימה.</li>
-       <li><b>רצף אכילה:</b> מהאכילה השנייה ואילך חייל אוכל גם אחורה. הרצף נמשך באותו תור.</li>
-       <li><b>מלכה:</b> זזה באלכסון כמה שרוצה. אוכלת חייל אחד ממרחק ונוחתת בכל משבצת ריקה אחריו. היא לא מדלגת על שני חיילים רצופים או על חייל שלה.</li>
-       <li>כלים שנאכלו יורדים בסוף הרצף, ואי אפשר לאכול את אותו כלי פעמיים.</li>
-       <li>חייל שמגיע לשורה האחרונה נהיה מלכה.</li>
-       <li>מי שנשאר בלי כלים או בלי מהלך חוקי מפסיד.</li>
-     </ul>
-     <button class="btn pri" type="button" data-act="close">סגור</button>`);
-}
-function openEnd(){
-  if(!cur||cur.o) return;
-  openSheet('end',
-    `<h2>מה קרה במשחק?</h2><p>הניקוד יתעדכן לפי הבחירה.</p>
-     <div class="stack">
-       <button class="btn" type="button" data-act="resign-r">אדום פרש</button>
-       <button class="btn" type="button" data-act="resign-w">לבן פרש</button>
-       <button class="btn" type="button" data-act="draw">תיקו</button>
-       <button class="btn ghost" type="button" data-act="close">ביטול</button>
-     </div>`);
-}
-function act(a){
-  if(a==='close'){ closeSheet(); return; }
-  if(a==='endsheet'){ openEnd(); return; }
-  if(a==='rematch'){
-    if(cur&&cur.o){ const ns=newState(cur,U); closeSheet(); commit(ns); } else closeSheet();
-    return;
-  }
-  if(a==='draw'||a==='resign-r'||a==='resign-w'){
-    if(cur&&!cur.o){
-      const ns=a==='draw'?finish(cur,'draw',null,U):finish(cur,'resign',a.slice(-1),U);
-      closeSheet(); beep('win'); commit(ns);
-    } else closeSheet();
-  }
-}
-
-/* ---------- events ---------- */
-boardEl.addEventListener('click',e=>{
-  const sq=e.target.closest('.sq');
-  if(sq) onSquare(+sq.dataset.i);
-});
-document.addEventListener('click',e=>{
-  const b=e.target.closest('[data-act]');
-  if(b){ ensureAudio(); act(b.dataset.act); }
-});
-overlay.addEventListener('click',e=>{ if(e.target===overlay) closeSheet(); });
-$('create-btn').addEventListener('click',()=>enter('r'));
-$('join-btn').addEventListener('click',()=>enter('w'));
-$('local-btn').addEventListener('click',startLocal);
-roomInput.addEventListener('keydown',e=>{ if(e.key==='Enter') enter('r'); });
-$('rules-btn').addEventListener('click',openRules);
-$('exit-btn').addEventListener('click',showLobby);
-$('sound-btn').addEventListener('click',()=>{
-  soundOn=!soundOn; ensureAudio(); soundLabel();
-  try{ localStorage.setItem('dama-sound',soundOn?'on':'off'); }catch(e){}
-});
-$('copy-btn').addEventListener('click',()=>{
-  const t=roomName;
-  const fail=()=>setHint('שם החדר: '+t);
-  try{
-    navigator.clipboard.writeText(t).then(()=>setHint('שם החדר הועתק'),fail);
-  }catch(e){ fail(); }
-});
-
-soundLabel();
-roomReady.then(api=>{ if(!api&&mode==='lobby') say('שירות החיבור לא נטען. אפשר לשחק על אותו מכשיר.'); });
-})();
-</script>
-</body>
-</html>
+            if (turn === 'red') {
+                turnBadge.innerText = 'תור אדום';
+                turnBadge.className = 'px-3 py-1 bg-red-500/20 border border-red-500/40 text-re
