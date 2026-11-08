@@ -39,17 +39,17 @@ box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.9);
 </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 select-none">
-​<!-- LOBBY SCREEN -->
+<!-- LOBBY SCREEN -->
 <div id="lobby-screen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
 <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-5 text-center">
 <div class="text-4xl">🔴👑⚪</div>
 <h1 class="text-2xl font-black text-amber-400">דמקה ישראלית - אונליין</h1>
 <p class="text-xs text-slate-400">הכנס שם חדר כדי לשחק עם חבר מרחוק!</p>
-​<div class="flex flex-col gap-3 text-right">
+<div class="flex flex-col gap-3 text-right">
 <label class="text-xs font-semibold text-slate-300">שם החדר (לדוגמה: daniel123):</label>
 <input id="room-input" type="text" placeholder="הקלד שם חדר..." class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-amber-500 text-center font-bold">
 </div>
-​<div class="flex gap-2">
+<div class="flex gap-2">
 <button id="create-room-btn" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-xl shadow-lg transition active:scale-95 text-sm cursor-pointer">
 צור חדר (אדום) 🏠
 </button>
@@ -57,10 +57,10 @@ box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.9);
 הצטרף (לבן) 🚪
 </button>
 </div>
-​<div id="lobby-status" class="text-xs text-amber-400 font-mono h-6 flex items-center justify-center"></div>
+<div id="lobby-status" class="text-xs text-amber-400 font-mono h-6 flex items-center justify-center"></div>
 </div>
 </div>
-​<!-- RULES MODAL -->
+<!-- RULES MODAL -->
 <div id="rules-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
 <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center flex flex-col gap-4">
 <h2 class="text-xl font-bold text-amber-400">חוקי דמקה ישראלית</h2>
@@ -72,7 +72,7 @@ box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.9);
 <button id="close-rules-btn" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl">סגור</button>
 </div>
 </div>
-​<!-- Header -->
+<!-- Header -->
 <header class="w-full max-w-md flex items-center justify-between px-2 py-2">
 <div class="flex items-center gap-2">
 <span id="room-display" class="text-xs bg-slate-800 border border-slate-700 px-2 py-1 rounded-lg text-amber-400 font-mono">חדר: -</span>
@@ -81,7 +81,7 @@ box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.9);
 <button id="rules-btn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition">📜 חוקים</button>
 </div>
 </header>
-​<!-- Main Game Area -->
+<!-- Main Game Area -->
 <main class="w-full max-w-md flex flex-col items-center gap-3 my-auto">
 <!-- Turn Indicator & Scores -->
 <div class="w-full flex items-center justify-between bg-slate-800/90 border border-slate-700/80 px-4 py-2.5 rounded-xl shadow">
@@ -99,11 +99,11 @@ box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.9);
 <div class="w-4 h-4 rounded-full bg-slate-200 shadow-md"></div>
 </div>
 </div>
-​<!-- Board Container -->
+<!-- Board Container -->
 <div class="relative w-full aspect-square bg-slate-800 p-2 rounded-2xl shadow-2xl border-4 border-slate-700">
 <div id="board" class="board-grid w-full h-full rounded-lg overflow-hidden border border-red-950"></div>
 </div>
-​<!-- Action / Status Bar & Controls -->
+<!-- Action / Status Bar & Controls -->
 <div class="w-full flex flex-col gap-2 px-1">
 <div class="flex items-center justify-between">
 <div id="status-message" class="text-xs text-slate-400 font-medium">מתחבר למשחק...</div>
@@ -114,11 +114,11 @@ box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.9);
 </div>
 </div>
 </main>
-​<!-- Footer -->
+<!-- Footer -->
 <footer class="text-center text-xs text-slate-500 py-1">
 דמקה ישראלית אונליין • פותח עבור דניאל זק
 </footer>
-​<script>
+<script>
 // Audio Synthesizer
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playSound(type) {
@@ -128,7 +128,7 @@ const gain = audioCtx.createGain();
 osc.connect(gain);
 gain.connect(audioCtx.destination);
 const now = audioCtx.currentTime;
-​if (type === 'move') {
+if (type === 'move') {
 osc.frequency.setValueAtTime(300, now);
 osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
 gain.gain.setValueAtTime(0.1, now);
@@ -148,7 +148,7 @@ gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
 osc.start(now); osc.stop(now + 0.3);
 }
 }
-​// --- PUBLIC FIREBASE BACKEND ---
+// --- PUBLIC FIREBASE BACKEND ---
 const firebaseConfig = {
 databaseURL: "https://checkers-israeli-default-rtdb.europe-west1.firebasedatabase.app"
 };
@@ -157,10 +157,10 @@ if (!firebase.apps.length) {
 firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.database();
-​let roomRef = null;
+let roomRef = null;
 let myRole = 'red'; // 'red' or 'white'
 let currentRoomName = '';
-​// Game State
+// Game State
 let board = [];
 let turn = 'red';
 let selectedPiece = null;
@@ -168,7 +168,7 @@ let validMoves = [];
 let forcedJumps = [];
 let jumpInProgress = null;
 let scores = { red: 0, white: 0 };
-​function createInitialBoard() {
+function createInitialBoard() {
 let b = Array(8).fill(null).map(() => Array(8).fill(null));
 // Red at bottom rows (5, 6, 7)
 for (let r = 5; r < 8; r++) {
@@ -184,26 +184,26 @@ if ((r + c) % 2 === 1) b[r][c] = { player: 'white', king: false };
 }
 return b;
 }
-​// --- LOBBY ACTIONS ---
+// --- LOBBY ACTIONS ---
 const lobbyScreen = document.getElementById('lobby-screen');
 const roomInput = document.getElementById('room-input');
 const lobbyStatus = document.getElementById('lobby-status');
-​document.getElementById('create-room-btn').addEventListener('click', () => {
+document.getElementById('create-room-btn').addEventListener('click', () => {
 const name = roomInput.value.trim().toLowerCase();
 if (!name) { lobbyStatus.innerText = '⚠️ נא להכניס שם חדר'; return; }
 myRole = 'red';
 joinRoom(name, true);
 });
-​document.getElementById('join-room-btn').addEventListener('click', () => {
+document.getElementById('join-room-btn').addEventListener('click', () => {
 const name = roomInput.value.trim().toLowerCase();
 if (!name) { lobbyStatus.innerText = '⚠️ נא להכניס שם חדר'; return; }
 myRole = 'white';
 joinRoom(name, false);
 });
-​function joinRoom(name, isCreator) {
+function joinRoom(name, isCreator) {
 currentRoomName = name;
 roomRef = db.ref('rooms/' + name);
-​if (isCreator) {
+if (isCreator) {
 roomRef.set({
 board: createInitialBoard(),
 turn: 'red',
@@ -212,25 +212,25 @@ jumpInProgress: null,
 lastAction: 'created'
 });
 }
-​document.getElementById('room-display').innerText = חדר: ${name};
+document.getElementById('room-display').innerText = חדר: ${name};
 lobbyScreen.style.display = 'none';
-​// Listen to real-time changes
+// Listen to real-time changes
 roomRef.on('value', snapshot => {
 const data = snapshot.val();
 if (!data) return;
-​board = data.board || createInitialBoard();
+board = data.board || createInitialBoard();
 turn = data.turn || 'red';
 scores = data.scores || { red: 0, white: 0 };
 jumpInProgress = data.jumpInProgress || null;
-​if (data.lastAction === 'resign') {
+if (data.lastAction === 'resign') {
 alert('השחקן השני פרש מהמשחק!');
 } else if (data.lastAction === 'draw') {
 alert('המשחק הסתיים בתיקו בהסכמה!');
 }
-​updateGame();
+updateGame();
 });
 }
-​function updateCloudState(extraAction = 'move') {
+function updateCloudState(extraAction = 'move') {
 if (!roomRef) return;
 roomRef.update({
 board: board,
@@ -240,13 +240,13 @@ jumpInProgress: jumpInProgress,
 lastAction: extraAction
 });
 }
-​// --- GAME CALCULATIONS ---
+// --- GAME CALCULATIONS ---
 function calculateAllMoves(player, specificPiece = null) {
 let moves = [];
 let piecesWithCaptures = [];
 const rows = specificPiece ? [specificPiece.r] : Array.from({length: 8}, (,i)=>i);
 const cols = specificPiece ? [specificPiece.c] : Array.from({length: 8}, (,i)=>i);
-​for (let r of rows) {
+for (let r of rows) {
 for (let c of cols) {
 const piece = board[r]?.[c];
 if (piece && piece.player === player) {
@@ -258,14 +258,14 @@ piecesWithCaptures.push({ r, c, moves: pieceCaptures });
 }
 }
 }
-​if (piecesWithCaptures.length > 0) {
+if (piecesWithCaptures.length > 0) {
 piecesWithCaptures.forEach(item => {
 moves.push(...item.moves.map(m => ({ ...m, isCapture: true })));
 });
 return { moves, hasCaptures: true, activePieces: piecesWithCaptures.map(p => ({ r: p.r, c: p.c })) };
 }
-​if (jumpInProgress) return { moves: [], hasCaptures: false, activePieces: [] };
-​for (let r of rows) {
+if (jumpInProgress) return { moves: [], hasCaptures: false, activePieces: [] };
+for (let r of rows) {
 for (let c of cols) {
 const piece = board[r]?.[c];
 if (piece && piece.player === player) {
@@ -276,7 +276,7 @@ moves.push(...normalMoves.map(m => ({ ...m, isCapture: false })));
 }
 return { moves, hasCaptures: false, activePieces: [] };
 }
-​function getNormalMovesForPiece(r, c) {
+function getNormalMovesForPiece(r, c) {
 const piece = board[r][c];
 if (!piece) return [];
 let moves = [];
@@ -302,12 +302,12 @@ currR += dr; currC += dc;
 }
 return moves;
 }
-​function getCapturesForPiece(r, c) {
+function getCapturesForPiece(r, c) {
 const piece = board[r][c];
 if (!piece) return [];
 let captures = [];
 const isFirstJump = !jumpInProgress;
-​if (!piece.king) {
+if (!piece.king) {
 const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 directions.forEach(([dr, dc]) => {
 const fwd = piece.player === 'red' ? -1 : 1;
@@ -345,32 +345,32 @@ currR += dr; currC += dc;
 }
 return captures;
 }
-​function updateGame() {
+function updateGame() {
 const analysis = calculateAllMoves(turn);
 forcedJumps = analysis.activePieces;
 validMoves = analysis.moves;
 renderBoard();
 renderUI(analysis);
 }
-​function renderBoard() {
+function renderBoard() {
 const boardEl = document.getElementById('board');
 boardEl.innerHTML = '';
 // Flip board so player's pieces are ALWAYS at the bottom of their screen
 const isFlipped = (myRole === 'white');
-​for (let displayR = 0; displayR < 8; displayR++) {
+for (let displayR = 0; displayR < 8; displayR++) {
 for (let displayC = 0; displayC < 8; displayC++) {
 const r = isFlipped ? 7 - displayR : displayR;
 const c = isFlipped ? 7 - displayC : displayC;
-​const isDark = (r + c) % 2 === 1;
+const isDark = (r + c) % 2 === 1;
 const cellEl = document.createElement('div');
 cellEl.className = relative flex items-center justify-center ${isDark ? 'bg-red-950 border border-red-900/40' : 'bg-slate-200'} rounded;
 cellEl.dataset.r = r; cellEl.dataset.c = c;
-​const piece = board[r]?.[c];
+const piece = board[r]?.[c];
 const isSelected = selectedPiece && selectedPiece.r === r && selectedPiece.c === c;
-​// Show valid moves ONLY AFTER selecting a piece
+// Show valid moves ONLY AFTER selecting a piece
 const isValidMove = selectedPiece && validMoves.some(m => m.fromR === selectedPiece.r && m.fromC === selectedPiece.c && m.toR === r && m.toC === c);
 const isMandatory = forcedJumps.some(p => p.r === r && p.c === c);
-​if (isDark && isMandatory && turn === piece?.player && !jumpInProgress) cellEl.classList.add('glow-mandatory');
+if (isDark && isMandatory && turn === piece?.player && !jumpInProgress) cellEl.classList.add('glow-mandatory');
 if (isSelected) cellEl.classList.add('glow-selected');
 if (isValidMove) {
 cellEl.classList.add('glow-valid');
@@ -378,7 +378,7 @@ const dot = document.createElement('div');
 dot.className = 'w-3 h-3 bg-emerald-400 rounded-full animate-ping absolute';
 cellEl.appendChild(dot);
 }
-​if (piece) {
+if (piece) {
 const pieceEl = document.createElement('div');
 let bgStyle = piece.player === 'red'
 ? 'bg-gradient-to-br from-orange-500 to-red-600 border-orange-300 text-amber-100'
@@ -387,24 +387,24 @@ pieceEl.className = w-4/5 h-4/5 rounded-full shadow-lg border-2 flex items-cente
 if (piece.king) pieceEl.innerHTML = '👑';
 cellEl.appendChild(pieceEl);
 }
-​cellEl.addEventListener('click', () => handleCellClick(r, c));
+cellEl.addEventListener('click', () => handleCellClick(r, c));
 boardEl.appendChild(cellEl);
 }
 }
 }
-​function renderUI(analysis) {
+function renderUI(analysis) {
 const turnBadge = document.getElementById('turn-badge');
 const statusMsg = document.getElementById('status-message');
 document.getElementById('p1-score').innerText = ${scores.red} ניצחונות;
 document.getElementById('p2-score').innerText = ${scores.white} ניצחונות;
-​if (turn === 'red') {
+if (turn === 'red') {
 turnBadge.innerText = 'תור אדום';
 turnBadge.className = 'px-3 py-1 bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-bold rounded-full animate-pulse';
 } else {
 turnBadge.innerText = 'תור לבן';
 turnBadge.className = 'px-3 py-1 bg-slate-200/20 border border-slate-200/40 text-slate-200 text-xs font-bold rounded-full animate-pulse';
 }
-​if (turn !== myRole) {
+if (turn !== myRole) {
 statusMsg.innerText = '⏳ ממתין לתור היריב...';
 statusMsg.className = 'text-xs text-amber-400 font-bold';
 } else if (analysis.hasCaptures) {
@@ -418,9 +418,9 @@ statusMsg.innerText = selectedPiece ? 'בחר משבצת ירוקה להזזה' 
 statusMsg.className = 'text-xs text-emerald-400 font-bold';
 }
 }
-​function handleCellClick(r, c) {
+function handleCellClick(r, c) {
 if (turn !== myRole) return; // Block moving on opponent's turn
-​const piece = board[r]?.[c];
+const piece = board[r]?.[c];
 if (piece && piece.player === turn) {
 if (jumpInProgress) {
 if (jumpInProgress.r === r && jumpInProgress.c === c) {
@@ -436,18 +436,18 @@ selectedPiece = { r, c };
 renderBoard();
 return;
 }
-​if (selectedPiece) {
+if (selectedPiece) {
 const matchedMove = validMoves.find(m => m.fromR === selectedPiece.r && m.fromC === selectedPiece.c && m.toR === r && m.toC === c);
 if (matchedMove) {
 executeMove(matchedMove);
 }
 }
 }
-​function executeMove(move) {
+function executeMove(move) {
 const piece = board[move.fromR][move.fromC];
 board[move.toR][move.toC] = piece;
 board[move.fromR][move.fromC] = null;
-​let didCapture = false;
+let didCapture = false;
 if (move.captured) {
 board[move.captured.r][move.captured.c] = null;
 didCapture = true;
@@ -455,12 +455,12 @@ playSound('capture');
 } else {
 playSound('move');
 }
-​const targetRow = piece.player === 'red' ? 0 : 7;
+const targetRow = piece.player === 'red' ? 0 : 7;
 if (!piece.king && move.toR === targetRow) {
 piece.king = true;
 playSound('king');
 }
-​if (didCapture) {
+if (didCapture) {
 jumpInProgress = { r: move.toR, c: move.toC };
 const nextCaptures = getCapturesForPiece(move.toR, move.toC);
 if (nextCaptures.length > 0) {
@@ -469,26 +469,26 @@ updateCloudState('move');
 return;
 }
 }
-​jumpInProgress = null;
+jumpInProgress = null;
 selectedPiece = null;
 turn = turn === 'red' ? 'white' : 'red';
-​checkWinCondition();
+checkWinCondition();
 updateCloudState('move');
 }
-​function checkWinCondition() {
+function checkWinCondition() {
 const redAnalysis = calculateAllMoves('red');
 const whiteAnalysis = calculateAllMoves('white');
 let redPieces = false, whitePieces = false;
-​for (let r = 0; r < 8; r++) {
+for (let r = 0; r < 8; r++) {
 for (let c = 0; c < 8; c++) {
 if (board[r][c]?.player === 'red') redPieces = true;
 if (board[r][c]?.player === 'white') whitePieces = true;
 }
 }
-​let winner = null;
+let winner = null;
 if (!redPieces || (redAnalysis.moves.length === 0 && turn === 'red')) winner = 'white';
 else if (!whitePieces || (whiteAnalysis.moves.length === 0 && turn === 'white')) winner = 'red';
-​if (winner) {
+if (winner) {
 const winName = winner === 'red' ? 'אדום' : 'לבן';
 scores[winner]++;
 alert(🎉 שחקן ${winName} ניצח בסיבוב!);
@@ -498,7 +498,7 @@ jumpInProgress = null;
 updateCloudState('win');
 }
 }
-​// Action Buttons
+// Action Buttons
 document.getElementById('resign-btn').addEventListener('click', () => {
 if (confirm('האם להכריז על פרישה?')) {
 const winner = myRole === 'red' ? 'white' : 'red';
@@ -509,7 +509,7 @@ jumpInProgress = null;
 updateCloudState('resign');
 }
 });
-​document.getElementById('draw-btn').addEventListener('click', () => {
+document.getElementById('draw-btn').addEventListener('click', () => {
 if (confirm('האם להציע תיקו?')) {
 board = createInitialBoard();
 turn = 'red';
@@ -517,13 +517,7 @@ jumpInProgress = null;
 updateCloudState('draw');
 }
 });
-​// Rules modal
+// Rules modal
 document.getElementById('rules-btn').addEventListener('click', () => {
 document.getElementById('rules-modal').style.display = 'flex';
 });
-document.getElementById('close-rules-btn').addEventListener('click', () => {
-document.getElementById('rules-modal').style.display = 'none';
-});
-</script>
-</body>
-</html>
